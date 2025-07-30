@@ -20,9 +20,13 @@ import {
   CodeOutlined,
   ThunderboltOutlined,
   RocketOutlined,
+  PlusOutlined,
+  ClearOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import html2canvas from "html2canvas";
 import ReactJsxParser from "react-jsx-parser";
+import domtoimage from "dom-to-image-more";
 
 const { TextArea } = Input;
 const { Option } = AntSelect;
@@ -30,6 +34,11 @@ const { Option } = AntSelect;
 function extractJSX(code: string): string {
   const match = code.match(/return\s*\(([\s\S]*?)\);/);
   return match ? match[1].trim() : "";
+}
+
+function extractInnerFormJSX(code: string): string {
+  const match = code.match(/<Form[^>]*>([\s\S]*?)<\/Form>/);
+  return match ? match[1].trim() : extractJSX(code);
 }
 
 const JSXPARSER_COMPONENTS = {
@@ -144,11 +153,13 @@ export default function Home() {
         }),
       };
 
-      setManualCode(data.code || "");
-      setVersions([...versions, newVersion]);
+      // ✅ Orden correcto para evitar render roto
+      setVersions((prev) => [...prev, newVersion]);
+      setManualCode(extractInnerFormJSX(data.code || ""));
       setActiveVersionId(newVersion.id);
       setPrompt("");
       setShowCode(false);
+      setEditingMode("builder"); // Fuerza volver a vista previa
     } catch (e) {
       alert("Error al generar: " + e);
     } finally {
@@ -158,6 +169,9 @@ export default function Home() {
 
   const downloadImage = async () => {
     if (!previewRef.current) return;
+
+    await document.fonts.ready;
+    await new Promise((res) => setTimeout(res, 100));
 
     const canvas = await html2canvas(previewRef.current, {
       backgroundColor: "#fff",
@@ -171,6 +185,28 @@ export default function Home() {
     link.click();
   };
 
+  const downloadImageDOM = async () => {
+  if (!previewRef.current) return;
+
+  await document.fonts.ready;
+  await new Promise((res) => setTimeout(res, 200)); // esperar render
+
+  const blob = await domtoimage.toBlob(previewRef.current, {
+    style: {
+      transform: "scale(1)",
+      transformOrigin: "top left",
+    },
+    filter: (node) => {
+      return true; // capturá todo
+    },
+  });
+
+  const link = document.createElement("a");
+  link.download = `form-version-${activeVersionId ?? "latest"}.png`;
+  link.href = URL.createObjectURL(blob);
+  link.click();
+};
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -180,90 +216,76 @@ export default function Home() {
     }
   };
 
-  const currentCode = activeVersion?.code || manualCode;
+  const currentCode = manualCode;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-4000"></div>
-      </div>
+    <div className="min-h-screen bg-white">
+      {/* Subtle grid pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080801a_1px,transparent_1px),linear-gradient(to_bottom,#8080801a_1px,transparent_1px)] bg-[size:24px_24px]"></div>
 
-      {/* Grid Pattern Overlay */}
-      <div className="absolute inset-0 bg-grid-white/[0.02] bg-[size:50px_50px]"></div>
-
-      <div className="relative z-10 p-8">
-        <div className="max-w-6xl mx-auto space-y-8">
+      <div className="relative z-10 p-6 md:p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
           {/* Header */}
-          <div className="text-center space-y-4 animate-fade-in-down">
+          <div className="text-center space-y-6 py-8">
             <div className="inline-block">
-              <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent drop-shadow-2xl">
-                Ant Form Builder
+              <h1 className="text-4xl md:text-5xl font-light text-gray-900 tracking-tight">
+                Form Builder
               </h1>
-              <div className="w-full h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-full mt-2 animate-pulse"></div>
+              <div className="w-12 h-px bg-gray-900 mx-auto mt-4"></div>
             </div>
-            <p className="text-gray-300 text-lg max-w-2xl mx-auto">
-              Generate stunning Ant Design forms with AI. Describe your vision
-              and watch it come to life.
+            <p className="text-gray-600 text-lg font-light max-w-2xl mx-auto leading-relaxed">
+              Create professional Ant Design forms with precision and elegance.
             </p>
           </div>
 
           {/* Prompt Section */}
-          <div className="backdrop-blur-lg bg-white/10 rounded-2xl p-8 shadow-2xl border border-white/20 animate-fade-in-up animation-delay-300">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
             <div className="space-y-6">
               <div className="relative">
                 <TextArea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   rows={4}
-                  placeholder="✨ Describe your dream form: login, contact, registration, survey..."
-                  className="w-full bg-white/10 border-white/20 text-white placeholder-gray-300 backdrop-blur-sm rounded-xl resize-none transition-all duration-300 hover:bg-white/15 focus:bg-white/15"
+                  placeholder="Describe your form requirements..."
+                  className="w-full border-gray-200 text-gray-900 placeholder-gray-400 rounded-md resize-none focus:border-gray-400 focus:ring-0"
                   style={{
-                    backgroundColor: "rgba(255, 255, 255, 0.1)",
-                    borderColor: "rgba(255, 255, 255, 0.2)",
-                    color: "white",
+                    fontSize: "15px",
+                    lineHeight: "1.6",
+                    fontWeight: "400",
                   }}
                 />
                 {isGenerating && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 rounded-xl backdrop-blur-sm">
-                    <div className="flex items-center gap-3 text-white">
-                      <ThunderboltOutlined className="animate-spin text-2xl text-yellow-400" />
-                      <span className="text-lg font-medium">
-                        Generating magic...
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/95 rounded-md">
+                    <div className="flex items-center gap-3 text-gray-700">
+                      <ThunderboltOutlined className="animate-spin text-lg" />
+                      <span className="font-medium text-sm">
+                        Generating form...
                       </span>
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   type="primary"
                   size="large"
                   icon={<RocketOutlined />}
                   onClick={fetchGeneratedCode}
                   loading={isGenerating}
-                  className="flex-1 md:flex-none h-12 bg-gradient-to-r from-blue-500 to-purple-600 border-none hover:from-blue-600 hover:to-purple-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)",
-                    borderColor: "transparent",
-                  }}
+                  className="flex-1 sm:flex-none h-11 bg-gray-900 border-gray-900 hover:bg-gray-800 font-medium"
                 >
-                  {isGenerating ? "Generating..." : "Generate / Improve Form"}
+                  {isGenerating ? "Generating..." : "Generate Form"}
                 </Button>
 
                 <AntSelect
                   value={activeVersionId ?? undefined}
-                  placeholder="🎯 Select version"
+                  placeholder="Select version"
                   onChange={(id) => setActiveVersionId(id)}
                   size="large"
                   style={{ width: 200 }}
                   disabled={versions.length === 0}
-                  className="version-select"
-                  classNames={{ popup: { root: "version-dropdown" } }}
+                  className="version-select-elegant"
                 >
                   {versions.map((v) => (
                     <Option key={v.id} value={v.id}>
@@ -277,16 +299,13 @@ export default function Home() {
 
           {/* Action Bar */}
           {(activeVersion || manualCode.trim()) && (
-            <div
-              id="action-bar"
-              className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-xl px-6 py-4 shadow-xl sticky top-4 z-20 animate-slide-in-right animation-delay-600"
-            >
+            <div className="bg-white border border-gray-200 rounded-lg px-6 py-4 shadow-sm sticky top-4 z-20">
               <div className="flex justify-between items-center">
                 <Button
                   icon={showCode ? <EyeOutlined /> : <CodeOutlined />}
                   onClick={() => setShowCode(!showCode)}
                   size="large"
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:border-white/30 transition-all duration-300 transform hover:scale-105"
+                  className="border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 font-medium"
                 >
                   {showCode ? "Preview Form" : "View Code"}
                 </Button>
@@ -296,7 +315,7 @@ export default function Home() {
                     icon={<CopyOutlined />}
                     onClick={() => copyToClipboard(currentCode)}
                     size="large"
-                    className="bg-green-500/20 border-green-400/30 text-green-300 hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 transform hover:scale-105"
+                    className="border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 font-medium"
                   >
                     Copy Code
                   </Button>
@@ -305,224 +324,285 @@ export default function Home() {
                     icon={<DownloadOutlined />}
                     onClick={downloadImage}
                     size="large"
-                    className="bg-blue-500/20 border-blue-400/30 text-blue-300 hover:bg-blue-500/30 hover:border-blue-400/50 transition-all duration-300 transform hover:scale-105"
+                    className="border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 font-medium"
                   >
-                    Download Image
+                    Export
                   </Button>
                 )}
               </div>
             </div>
           )}
 
-          {/* Preview/Code Section */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in-up animation-delay-900">
-            {/* Sidebar builder */}
-            <div className="space-y-4 bg-white/10 rounded-xl p-4 border border-white/20 shadow-lg">
-              <h3 className="text-white text-lg font-semibold mb-2">
-                🧱 Components
-              </h3>
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev + `\n<Form.Item label="Text"><Input /></Form.Item>`
-                  )
-                }
-              >
-                + Input
-              </Button>
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Component Sidebar */}
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm h-fit">
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-900 rounded-full"></div>
+                  <h3 className="text-gray-900 text-lg font-medium">
+                    Components
+                  </h3>
+                </div>
+              </div>
 
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev +
-                      `\n<Form.Item label="Password"><Input.Password /></Form.Item>`
-                  )
-                }
-              >
-                + Password
-              </Button>
+              <div className="p-4 space-y-2">
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item label="Text Field" name="text" rules={[{ required: true }]}><Input placeholder="Enter text" /></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Text Input
+                </Button>
 
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev +
-                      `\n<Form.Item label="Email" name="email" rules={[{ type: 'email' }]}><Input /></Form.Item>`
-                  )
-                }
-              >
-                + Email
-              </Button>
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item label="Password" name="password" rules={[{ required: true }]}><Input.Password placeholder="Enter password" /></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Password
+                </Button>
 
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev +
-                      `\n<Form.Item label="Number"><InputNumber /></Form.Item>`
-                  )
-                }
-              >
-                + Number
-              </Button>
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item label="Email" name="email" rules={[{ required: true, type: 'email' }]}><Input placeholder="Enter email" /></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Email
+                </Button>
 
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev +
-                      `\n<Form.Item label="Date"><DatePicker /></Form.Item>`
-                  )
-                }
-              >
-                + Date
-              </Button>
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item label="Number" name="number"><InputNumber style={{ width: '100%' }} placeholder="Enter number" /></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Number
+                </Button>
 
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev +
-                      `\n<Form.Item label="Select"><Select><Option value="A">Option A</Option><Option value="B">Option B</Option></Select></Form.Item>`
-                  )
-                }
-              >
-                + Select
-              </Button>
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item label="Date" name="date"><DatePicker style={{ width: '100%' }} placeholder="Select date" /></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Date Picker
+                </Button>
 
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev +
-                      `\n<Form.Item label="Checkbox"><Checkbox>Accept terms</Checkbox></Form.Item>`
-                  )
-                }
-              >
-                + Checkbox
-              </Button>
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item label="Select" name="select"><Select placeholder="Choose option"><Option value="option1">Option 1</Option><Option value="option2">Option 2</Option></Select></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Select
+                </Button>
 
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev +
-                      `\n<Form.Item label="Radio Group"><Radio.Group><Radio value="1">Option 1</Radio><Radio value="2">Option 2</Radio></Radio.Group></Form.Item>`
-                  )
-                }
-              >
-                + Radio Group
-              </Button>
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item name="checkbox" valuePropName="checked"><Checkbox>I agree to the terms</Checkbox></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Checkbox
+                </Button>
 
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev +
-                      `\n<Form.Item label="Textarea"><TextArea rows={4} /></Form.Item>`
-                  )
-                }
-              >
-                + TextArea
-              </Button>
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item label="Options" name="radio"><Radio.Group><Radio value="1">Option 1</Radio><Radio value="2">Option 2</Radio></Radio.Group></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Radio Group
+                </Button>
 
-              <Button
-                block
-                onClick={() =>
-                  setManualCode(
-                    (prev) =>
-                      prev +
-                      `\n<Form.Item><Button type="primary" htmlType="submit">Submit</Button></Form.Item>`
-                  )
-                }
-              >
-                + Submit Button
-              </Button>
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item label="Message" name="message"><TextArea rows={4} placeholder="Enter your message" /></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Text Area
+                </Button>
 
-              <Button
-                block
-                onClick={() => setManualCode("")}
-                danger
-                className="mt-2"
-              >
-                Clear Form
-              </Button>
+                <Button
+                  block
+                  size="middle"
+                  onClick={() =>
+                    setManualCode(
+                      (prev) =>
+                        prev +
+                        `\n<Form.Item><Button type="primary" htmlType="submit" className="bg-gray-900 border-gray-900 hover:bg-gray-800">Submit</Button></Form.Item>`
+                    )
+                  }
+                  className="text-left justify-start border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <span className="text-gray-400 mr-2">+</span>
+                  Submit Button
+                </Button>
+              </div>
 
-              <Button
-                block
-                type="primary"
-                onClick={() => setEditingMode("code")}
-                className="mt-4"
-              >
-                Edit Code
-              </Button>
+              <div className="p-4 border-t border-gray-100 space-y-2">
+                <Button
+                  block
+                  icon={<ClearOutlined />}
+                  onClick={() => setManualCode("")}
+                  className="border-red-200 text-red-600 hover:border-red-300 hover:text-red-700 hover:bg-red-50"
+                  size="middle"
+                >
+                  Clear Form
+                </Button>
+
+                <Button
+                  block
+                  icon={<EditOutlined />}
+                  onClick={() => setEditingMode("code")}
+                  className="bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 hover:border-gray-300"
+                  size="middle"
+                >
+                  Edit Code
+                </Button>
+              </div>
             </div>
 
-            {/* Main preview or editor */}
+            {/* Main Preview/Code Area */}
             <div
-              className="md:col-span-3 backdrop-blur-lg bg-white/5 rounded-2xl p-8 shadow-2xl border border-white/10 min-h-96"
+              className="form-capture-area lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm min-h-96"
               ref={previewRef}
             >
               {showCode || editingMode === "code" ? (
-                <div className="relative">
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                    <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                    <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                <div className="p-6">
+                  <div className="relative">
+                    <div className="absolute top-4 right-4 flex gap-1.5 z-10">
+                      <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                      <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                      <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                    </div>
+                    <TextArea
+                      rows={20}
+                      value={currentCode}
+                      onChange={(e) => setManualCode(e.target.value)}
+                      className="text-sm bg-gray-50 border-gray-200 rounded-lg p-4 font-mono"
+                      style={{
+                        fontFamily:
+                          "'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace",
+                        fontSize: "14px",
+                        lineHeight: "1.5",
+                      }}
+                    />
+                    {editingMode === "code" && (
+                      <Button
+                        type="primary"
+                        className="mt-4 bg-gray-900 border-gray-900 hover:bg-gray-800"
+                        onClick={() => setEditingMode("builder")}
+                      >
+                        Save & Return
+                      </Button>
+                    )}
                   </div>
-                  <TextArea
-                    rows={20}
-                    value={activeVersion?.code || manualCode}
-                    onChange={(e) => setManualCode(e.target.value)}
-                    className="textArea text-sm font-mono bg-gray-900/50 text-white rounded-xl p-4 border border-gray-700/50"
-                  />
-                  <Button
-                    type="primary"
-                    className="mt-4"
-                    onClick={() => {
-                      setEditingMode("builder");
-                    }}
-                  >
-                    Save & Return
-                  </Button>
                 </div>
               ) : (
-                <div className="previewArea bg-white rounded-xl p-8 shadow-inner min-h-80 transition-all duration-500 hover:shadow-2xl">
-                  <Form layout="vertical">
-                    <ReactJsxParser
-                      jsx={manualCode.replace(/Form\.Item/g, "FormItem")}
-                      components={JSXPARSER_COMPONENTS}
-                    />
-                  </Form>
+                <div className="p-8">
+                  {currentCode || manualCode ? (
+                    <div className="bg-gray-50 rounded-lg p-8 border border-gray-100">
+                      <Form
+                        layout="vertical"
+                        className="max-w-lg mx-auto"
+                        onFinish={(values) =>
+                          console.log("Form values:", values)
+                        }
+                      >
+                        <ReactJsxParser
+                          jsx={manualCode}
+                          components={JSXPARSER_COMPONENTS}
+                          key={manualCode} // <- Esto fuerza a recrear el componente cuando el código cambia
+                        />
+                      </Form>
+                    </div>
+                  ) : (
+                    <div className="text-center py-20">
+                      <div className="w-16 h-16 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                        <RocketOutlined className="text-2xl text-gray-400" />
+                      </div>
+                      <h3 className="text-xl font-medium text-gray-900 mb-2">
+                        Ready to create
+                      </h3>
+                      <p className="text-gray-500 max-w-sm mx-auto">
+                        Start by describing your form requirements or add
+                        components manually from the sidebar.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
-
-          {/* Empty State */}
-          {!activeVersion && (
-            <div className="text-center py-20 animate-fade-in-up animation-delay-600">
-              <div className="text-6xl mb-6">🚀</div>
-              <h3 className="text-2xl font-semibold text-white mb-4">
-                Ready to build something amazing?
-              </h3>
-              <p className="text-gray-300 text-lg max-w-md mx-auto">
-                Start by describing your form in the prompt above. Let AI do the
-                magic!
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
