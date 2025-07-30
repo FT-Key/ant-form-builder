@@ -10,6 +10,7 @@ import {
   InputNumber,
   Radio,
   Select as AntSelect,
+  message,
 } from "antd";
 import {
   SendOutlined,
@@ -31,12 +32,32 @@ function extractJSX(code: string): string {
   return match ? match[1].trim() : "";
 }
 
+const JSXPARSER_COMPONENTS = {
+  Form,
+  Input,
+  InputNumber,
+  Button,
+  DatePicker,
+  Checkbox,
+  Radio,
+  Select: AntSelect,
+  TextArea,
+  Option,
+  FormItem: Form.Item,
+  "Input.Password": Input.Password,
+  "Radio.Group": Radio.Group,
+};
+
 export default function Home() {
   const [isStylesLoaded, setIsStylesLoaded] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [versions, setVersions] = useState<
     { id: number; prompt: string; code: string; messages: any[] }[]
   >([]);
+
+  const [editingMode, setEditingMode] = useState<"builder" | "code">("builder");
+  const [manualCode, setManualCode] = useState<string>("");
+
   const [activeVersionId, setActiveVersionId] = useState<number | null>(null);
   const [showCode, setShowCode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -67,7 +88,7 @@ export default function Home() {
   const activeVersion = versions.find((v) => v.id === activeVersionId);
 
   const buildMessages = () => {
-    if (!activeVersion) return [];
+    if (!activeVersion && !manualCode.trim()) return [];
 
     const systemMessage = {
       role: "system",
@@ -75,7 +96,15 @@ export default function Home() {
         "You generate React forms using Ant Design only. Use <Form>, <Form.Item>, <Input>, <Button>, etc. Return ONLY JSX code without explanations.",
     };
 
-    return [systemMessage, ...activeVersion.messages];
+    const codeContext = {
+      role: "user",
+      content: `Current form code:\n${manualCode.trim()}`,
+    };
+
+    const baseMessages = activeVersion ? activeVersion.messages : [];
+
+    // Devolvemos el sistema, el código manual y luego la conversación previa
+    return [systemMessage, codeContext, ...baseMessages];
   };
 
   const fetchGeneratedCode = async () => {
@@ -115,6 +144,7 @@ export default function Home() {
         }),
       };
 
+      setManualCode(data.code || "");
       setVersions([...versions, newVersion]);
       setActiveVersionId(newVersion.id);
       setPrompt("");
@@ -129,23 +159,28 @@ export default function Home() {
   const downloadImage = async () => {
     if (!previewRef.current) return;
 
-    const actionBar = document.getElementById("action-bar");
-    const origDisplay = actionBar?.style.display;
-    if (actionBar) actionBar.style.display = "none";
-
     const canvas = await html2canvas(previewRef.current, {
       backgroundColor: "#fff",
       scale: 2,
       useCORS: true,
     });
 
-    if (actionBar) actionBar.style.display = origDisplay || "";
-
     const link = document.createElement("a");
     link.download = `form-version-${activeVersionId ?? "latest"}.png`;
     link.href = canvas.toDataURL("image/png");
     link.click();
   };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      message.success("Código copiado!");
+    } catch (err) {
+      message.error("No se pudo copiar el código");
+    }
+  };
+
+  const currentCode = activeVersion?.code || manualCode;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
@@ -241,7 +276,7 @@ export default function Home() {
           </div>
 
           {/* Action Bar */}
-          {activeVersion && (
+          {(activeVersion || manualCode.trim()) && (
             <div
               id="action-bar"
               className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-xl px-6 py-4 shadow-xl sticky top-4 z-20 animate-slide-in-right animation-delay-600"
@@ -259,10 +294,7 @@ export default function Home() {
                 {showCode ? (
                   <Button
                     icon={<CopyOutlined />}
-                    onClick={() => {
-                      navigator.clipboard.writeText(activeVersion.code);
-                      alert("✅ Código copiado!");
-                    }}
+                    onClick={() => copyToClipboard(currentCode)}
                     size="large"
                     className="bg-green-500/20 border-green-400/30 text-green-300 hover:bg-green-500/30 hover:border-green-400/50 transition-all duration-300 transform hover:scale-105"
                   >
@@ -283,49 +315,200 @@ export default function Home() {
           )}
 
           {/* Preview/Code Section */}
-          {activeVersion && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-fade-in-up animation-delay-900">
+            {/* Sidebar builder */}
+            <div className="space-y-4 bg-white/10 rounded-xl p-4 border border-white/20 shadow-lg">
+              <h3 className="text-white text-lg font-semibold mb-2">
+                🧱 Components
+              </h3>
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev + `\n<Form.Item label="Text"><Input /></Form.Item>`
+                  )
+                }
+              >
+                + Input
+              </Button>
+
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev +
+                      `\n<Form.Item label="Password"><Input.Password /></Form.Item>`
+                  )
+                }
+              >
+                + Password
+              </Button>
+
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev +
+                      `\n<Form.Item label="Email" name="email" rules={[{ type: 'email' }]}><Input /></Form.Item>`
+                  )
+                }
+              >
+                + Email
+              </Button>
+
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev +
+                      `\n<Form.Item label="Number"><InputNumber /></Form.Item>`
+                  )
+                }
+              >
+                + Number
+              </Button>
+
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev +
+                      `\n<Form.Item label="Date"><DatePicker /></Form.Item>`
+                  )
+                }
+              >
+                + Date
+              </Button>
+
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev +
+                      `\n<Form.Item label="Select"><Select><Option value="A">Option A</Option><Option value="B">Option B</Option></Select></Form.Item>`
+                  )
+                }
+              >
+                + Select
+              </Button>
+
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev +
+                      `\n<Form.Item label="Checkbox"><Checkbox>Accept terms</Checkbox></Form.Item>`
+                  )
+                }
+              >
+                + Checkbox
+              </Button>
+
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev +
+                      `\n<Form.Item label="Radio Group"><Radio.Group><Radio value="1">Option 1</Radio><Radio value="2">Option 2</Radio></Radio.Group></Form.Item>`
+                  )
+                }
+              >
+                + Radio Group
+              </Button>
+
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev +
+                      `\n<Form.Item label="Textarea"><TextArea rows={4} /></Form.Item>`
+                  )
+                }
+              >
+                + TextArea
+              </Button>
+
+              <Button
+                block
+                onClick={() =>
+                  setManualCode(
+                    (prev) =>
+                      prev +
+                      `\n<Form.Item><Button type="primary" htmlType="submit">Submit</Button></Form.Item>`
+                  )
+                }
+              >
+                + Submit Button
+              </Button>
+
+              <Button
+                block
+                onClick={() => setManualCode("")}
+                danger
+                className="mt-2"
+              >
+                Clear Form
+              </Button>
+
+              <Button
+                block
+                type="primary"
+                onClick={() => setEditingMode("code")}
+                className="mt-4"
+              >
+                Edit Code
+              </Button>
+            </div>
+
+            {/* Main preview or editor */}
             <div
-              className="backdrop-blur-lg bg-white/5 rounded-2xl p-8 shadow-2xl border border-white/10 animate-fade-in-up animation-delay-900 min-h-96"
+              className="md:col-span-3 backdrop-blur-lg bg-white/5 rounded-2xl p-8 shadow-2xl border border-white/10 min-h-96"
               ref={previewRef}
             >
-              {showCode ? (
+              {showCode || editingMode === "code" ? (
                 <div className="relative">
                   <div className="absolute top-4 right-4 flex gap-2">
                     <div className="w-3 h-3 bg-red-400 rounded-full"></div>
                     <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
                     <div className="w-3 h-3 bg-green-400 rounded-full"></div>
                   </div>
-                  <pre className="whitespace-pre-wrap text-sm text-gray-100 bg-gray-900/50 rounded-xl p-6 border border-gray-700/50 font-mono overflow-x-auto">
-                    <code className="language-jsx">
-                      {activeVersion.code.trim()}
-                    </code>
-                  </pre>
+                  <TextArea
+                    rows={20}
+                    value={activeVersion?.code || manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                    className="textArea text-sm font-mono bg-gray-900/50 text-white rounded-xl p-4 border border-gray-700/50"
+                  />
+                  <Button
+                    type="primary"
+                    className="mt-4"
+                    onClick={() => {
+                      setEditingMode("builder");
+                    }}
+                  >
+                    Save & Return
+                  </Button>
                 </div>
               ) : (
-                <div className="bg-white rounded-xl p-8 shadow-inner min-h-80 transition-all duration-500 hover:shadow-2xl">
-                  <ReactJsxParser
-                    jsx={extractJSX(activeVersion.code).replace(
-                      /Form\.Item/g,
-                      "FormItem"
-                    )}
-                    components={{
-                      Form,
-                      Input,
-                      InputNumber,
-                      Button,
-                      DatePicker,
-                      Checkbox,
-                      Radio,
-                      Select: AntSelect,
-                      TextArea,
-                      Option,
-                      FormItem: Form.Item,
-                    }}
-                  />
+                <div className="previewArea bg-white rounded-xl p-8 shadow-inner min-h-80 transition-all duration-500 hover:shadow-2xl">
+                  <Form layout="vertical">
+                    <ReactJsxParser
+                      jsx={manualCode.replace(/Form\.Item/g, "FormItem")}
+                      components={JSXPARSER_COMPONENTS}
+                    />
+                  </Form>
                 </div>
               )}
             </div>
-          )}
+          </div>
 
           {/* Empty State */}
           {!activeVersion && (
