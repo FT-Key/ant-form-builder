@@ -51,6 +51,11 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Nuevo: para contar inserciones y generar nombres únicos
+  const [nameCounters, setNameCounters] = useState<{ [key: string]: number }>(
+    {}
+  );
+
   // Cuando cambia la versión de antd, actualizamos el código base
   useEffect(() => {
     const baseCode = getBaseCode(antdVersion);
@@ -158,6 +163,32 @@ export default function Home() {
     link.click();
   };
 
+  function generateUniqueName(baseName: string, existingCode: string) {
+    const regex = new RegExp(`${baseName}(\\d*)`, "g");
+    const matches = [];
+    let match;
+    while ((match = regex.exec(existingCode)) !== null) {
+      const num = match[1] ? parseInt(match[1], 10) : 0;
+      matches.push(num);
+    }
+    matches.sort((a, b) => a - b);
+
+    let i = 1;
+    while (matches.includes(i)) {
+      i++;
+    }
+    return baseName + i;
+  }
+
+  const handleInsert = (code: string, label: string) => {
+    const baseName = label.toLowerCase().replace(/\s+/g, "");
+    const uniqueName = generateUniqueName(baseName, manualCode);
+
+    const newCode = code.replace(/name="[^"]*"/, `name="${uniqueName}"`);
+
+    setManualCode((prev) => prev + "\n" + newCode);
+  };
+
   if (!isStylesLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
@@ -199,8 +230,9 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
+            {/* Pasamos la función con el tipo al sidebar */}
             <SidebarBuilder
-              onInsert={(code) => setManualCode((prev) => prev + code)}
+              onInsert={handleInsert}
               setEditingMode={setEditingMode}
             />
           </div>

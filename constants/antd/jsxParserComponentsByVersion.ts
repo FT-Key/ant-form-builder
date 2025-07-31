@@ -15,7 +15,6 @@ import {
   TreeSelect,
   Mentions,
   AutoComplete,
-  Transfer,
   Switch,
   Descriptions,
   Steps,
@@ -28,6 +27,7 @@ import {
 } from "antd";
 import PreviewTour from "../../components/PreviewTour";
 import PreviewFloatButton from "../../components/PreviewFloatButton";
+import PreviewTransfer from "../../components/PreviewTransfer";
 
 export const jsxParserComponentsV3 = {
   Form,
@@ -52,7 +52,7 @@ export const jsxParserComponentsV3 = {
   TreeSelect,
   Mentions,
   AutoComplete,
-  Transfer,
+  Transfer: PreviewTransfer,
   Switch,
 };
 
