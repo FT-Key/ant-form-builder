@@ -13,7 +13,7 @@ export default function PreviewArea({
 }) {
   return (
     <div
-      className="form-capture-area lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm min-h-96"
+      className="form-capture-area lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm min-h-96 relative"
       ref={previewRef}
     >
       <div className="p-8">

@@ -8,7 +8,7 @@ export default function SidebarBuilder({
   onInsert,
   setEditingMode,
 }: {
-  onInsert: (code: string) => void;
+  onInsert: (code: string, type: string) => void;
   setEditingMode: (mode: "builder" | "code") => void;
 }) {
   const { antdVersion } = useAntdVersion();
@@ -30,7 +30,7 @@ export default function SidebarBuilder({
         {buttons.map(({ label, code }) => (
           <button
             key={label}
-            onClick={() => onInsert("\n" + code)}
+            onClick={() => onInsert("\n" + code, label)}
             className="block w-full text-left px-3 py-2 border border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200 rounded"
           >
             <span className="text-gray-400 mr-2">+</span>

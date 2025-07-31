@@ -4,11 +4,15 @@ import { FloatButton, FloatButtonProps } from "antd";
 
 export default function PreviewFloatButton(props: FloatButtonProps) {
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <FloatButton
-        {...props}
-        style={{ position: "absolute", bottom: 16, right: 16, ...props.style }}
-      />
-    </div>
+    <FloatButton
+      {...props}
+      style={{
+        position: "absolute", // clave: relativo al contenedor padre con `relative`
+        bottom: 16,
+        right: 16,
+        zIndex: 10,
+        ...props.style,
+      }}
+    />
   );
 }
