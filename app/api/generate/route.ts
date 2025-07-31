@@ -28,11 +28,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const version = body.version || "v5"; // default
     const systemMessage = {
       role: "system",
       content:
-        "You are a React code generator. ONLY return valid JSX code for forms using Ant Design. " +
-        "Each <Form.Item> with a `name` prop MUST have exactly one single child element (no fragments or multiple siblings). " +
+        `You are a React code generator. ONLY return valid JSX code for forms using Ant Design version ${version}. ` +
+        "Each <Form.Item> with a `name` prop MUST have exactly one single child element. " +
         "Do NOT include explanations, comments, or markdown. Return ONLY clean, valid JSX code.",
     };
 

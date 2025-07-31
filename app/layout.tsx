@@ -4,6 +4,7 @@ import "antd/dist/reset.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AntdVersionProvider } from "../context/AntdVersionContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,9 +22,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ConfigProvider theme={{ token: { colorPrimary: "#1677ff" } }}>
-          {children}
-        </ConfigProvider>
+        <AntdVersionProvider>
+          <ConfigProvider theme={{ token: { colorPrimary: "#1677ff" } }}>
+            {children}
+          </ConfigProvider>
+        </AntdVersionProvider>
       </body>
     </html>
   );
