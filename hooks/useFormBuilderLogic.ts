@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { toPng } from "html-to-image";
 import { message } from "antd";
 import type { AntdVersion } from "../context/AntdVersionContext";
@@ -26,6 +26,44 @@ export function useFormBuilderLogic(
 
   const activeVersion = versions.find((v) => v.id === activeVersionId);
   const components = jsxParserComponentsByVersion[antdVersion];
+
+  // --- Nuevo: manejo inputs para InputList ---
+  const parseInputsFromCode = useCallback((codeStr: string) => {
+    const regex = /<Form\.Item[^>]*>([\s\S]*?)<\/Form\.Item>/g;
+    const matches = [];
+    let match;
+    while ((match = regex.exec(codeStr))) {
+      matches.push(match[0]);
+    }
+    return matches;
+  }, []);
+
+  const inputsBlocks = parseInputsFromCode(localCode);
+
+  const inputs = inputsBlocks.map((block, i) => ({
+    id: `input-${i}`,
+    label: block.match(/name="([^"]+)"/)?.[1] || `Input ${i + 1}`,
+  }));
+
+  const reorderCodeByInputIds = useCallback(
+    (newOrder: string[]) => {
+      const idToBlock: Record<string, string> = {};
+      inputs.forEach(({ id }, idx) => {
+        idToBlock[id] = inputsBlocks[idx];
+      });
+
+      const reorderedBlocks = newOrder
+        .map((id) => idToBlock[id])
+        .filter(Boolean);
+
+      const newCode = reorderedBlocks.join("\n");
+
+      setLocalCode(newCode);
+      setCode(newCode);
+      setHasUnsavedChanges(true);
+    },
+    [inputs, inputsBlocks]
+  );
 
   useEffect(() => {
     if (document.readyState === "complete") {
@@ -72,6 +110,7 @@ export function useFormBuilderLogic(
       `name="${uniqueName}"`
     );
     setLocalCode((prev) => prev + "\n" + updated);
+    setHasUnsavedChanges(true);
   };
 
   const handleSave = () => {
@@ -160,5 +199,7 @@ export function useFormBuilderLogic(
     handleVersionChange,
     handleDownloadImage,
     isStylesLoaded,
+    inputs,
+    reorderCodeByInputIds,
   };
 }
