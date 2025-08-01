@@ -29,6 +29,7 @@ import ActionBar from "../components/ActionBar";
 import SidebarBuilder from "../components/SidebarBuilder";
 import PreviewArea from "../components/PreviewArea";
 import CodeEditor from "../components/CodeEditor";
+import EditActions from "../components/EditActions";
 
 import ReactJsxParser from "react-jsx-parser";
 import { useAntdVersion } from "../context/AntdVersionContext";
@@ -44,6 +45,8 @@ export default function Home() {
   const [isStylesLoaded, setIsStylesLoaded] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [manualCode, setManualCode] = useState<string>("");
+  const [localCode, setLocalCode] = useState<string>("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
   const [editingMode, setEditingMode] = useState<"builder" | "code">("builder");
   const [activeVersionId, setActiveVersionId] = useState<number | null>(null);
@@ -51,12 +54,10 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // Nuevo: para contar inserciones y generar nombres únicos
   const [nameCounters, setNameCounters] = useState<{ [key: string]: number }>(
     {}
   );
 
-  // Cuando cambia la versión de antd, actualizamos el código base
   useEffect(() => {
     const baseCode = getBaseCode(antdVersion);
     setManualCode(baseCode);
@@ -72,7 +73,20 @@ export default function Home() {
     }
   }, []);
 
+  // Sync manualCode → localCode
+  useEffect(() => {
+    setLocalCode(manualCode);
+  }, [manualCode]);
+
   const activeVersion = versions.find((v) => v.id === activeVersionId);
+
+  // Detect changes
+  useEffect(() => {
+    const trimmedLocal = localCode.trim();
+    const trimmedCurrent = (activeVersion?.code || manualCode).trim();
+    setHasUnsavedChanges(trimmedLocal !== trimmedCurrent);
+  }, [localCode, activeVersion, manualCode]);
+
   const currentCode = manualCode;
 
   const buildMessages = () => {
@@ -109,10 +123,19 @@ export default function Home() {
         return;
       }
 
+      // Obtener máximo ID actual para asignar uno nuevo
+      const maxId =
+        versions.length > 0 ? Math.max(...versions.map((v) => v.id)) : 0;
+
+      const rawCode = data.code || "";
+      const cleanedCode = rawCode.includes("<Form")
+        ? rawCode.replace(/<Form[^>]*>([\s\S]*?)<\/Form>/i, "$1").trim()
+        : rawCode;
+
       const newVersion = {
-        id: versions.length + 1,
+        id: maxId + 1,
         prompt: prompt.trim(),
-        code: data.code || "",
+        code: cleanedCode,
         messages: [
           ...(activeVersion?.messages || []),
           userMessage,
@@ -120,18 +143,20 @@ export default function Home() {
         ],
       };
 
+      // Actualizar todo en el orden correcto
       setVersions((prev) => [...prev, newVersion]);
-      // Extrae el contenido dentro del <Form> si existe
-      const rawCode = data.code || "";
-      const cleanedCode = rawCode.includes("<Form")
-        ? rawCode.replace(/<Form[^>]*>([\s\S]*?)<\/Form>/i, "$1").trim()
-        : rawCode;
-
-      setManualCode(cleanedCode);
       setActiveVersionId(newVersion.id);
+      setManualCode(cleanedCode);
+      setLocalCode(cleanedCode);
       setPrompt("");
       setShowCode(false);
       setEditingMode("builder");
+
+      // Asegurar que no hay cambios pendientes después de generar
+      // Usar setTimeout para asegurar que todos los estados se actualicen primero
+      setTimeout(() => {
+        setHasUnsavedChanges(false);
+      }, 0);
     } catch (e) {
       alert("Error al generar: " + e);
     } finally {
@@ -182,11 +207,48 @@ export default function Home() {
 
   const handleInsert = (code: string, label: string) => {
     const baseName = label.toLowerCase().replace(/\s+/g, "");
-    const uniqueName = generateUniqueName(baseName, manualCode);
+    const uniqueName = generateUniqueName(baseName, localCode); // usa localCode ahora
 
     const newCode = code.replace(/name="[^"]*"/, `name="${uniqueName}"`);
+    const updatedCode = localCode + "\n" + newCode;
 
-    setManualCode((prev) => prev + "\n" + newCode);
+    setLocalCode(updatedCode); // solo localCode
+    // NO actualizar manualCode
+  };
+
+  const handleSave = () => {
+    const maxId =
+      versions.length > 0 ? Math.max(...versions.map((v) => v.id)) : 0;
+
+    const newVersion = {
+      id: maxId + 1,
+      prompt: "Manual edit",
+      code: localCode,
+      messages: activeVersion?.messages || [],
+    };
+
+    setVersions((prev) => [...prev, newVersion]);
+    setManualCode(localCode); // ✅ este es el nuevo punto de verdad
+    setActiveVersionId(newVersion.id);
+    setEditingMode("builder");
+    setHasUnsavedChanges(false);
+  };
+
+  const handleCancel = () => {
+    setLocalCode(activeVersion?.code || manualCode);
+    setHasUnsavedChanges(false);
+    setEditingMode("builder");
+  };
+
+  const handleVersionChange = (id: number) => {
+    const version = versions.find((v) => v.id === id);
+    if (version) {
+      setActiveVersionId(id);
+      setManualCode(version.code);
+      setLocalCode(version.code);
+      setEditingMode("builder");
+      setHasUnsavedChanges(false);
+    }
   };
 
   if (!isStylesLoaded) {
@@ -217,7 +279,7 @@ export default function Home() {
         <VersionSelector
           versions={versions}
           activeVersionId={activeVersionId}
-          setActiveVersionId={setActiveVersionId}
+          setActiveVersionId={handleVersionChange}
         />
 
         <ActionBar
@@ -230,32 +292,29 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
-            {/* Pasamos la función con el tipo al sidebar */}
             <SidebarBuilder
               onInsert={handleInsert}
               setEditingMode={setEditingMode}
             />
           </div>
-          {showCode || editingMode === "code" ? (
-            <div className="lg:col-span-3">
-              <CodeEditor
-                manualCode={manualCode}
-                setManualCode={setManualCode}
-                setEditingMode={setEditingMode}
-                activeVersion={activeVersion}
-                setVersions={setVersions}
-                setActiveVersionId={setActiveVersionId}
-              />
-            </div>
-          ) : (
-            <div className="lg:col-span-3">
+          <div className="lg:col-span-3 space-y-4">
+            {showCode || editingMode === "code" ? (
+              <CodeEditor localCode={localCode} setLocalCode={setLocalCode} />
+            ) : (
               <PreviewArea
-                manualCode={manualCode}
+                manualCode={localCode} // ← usamos localCode para que se vea lo que se edita
                 components={components}
                 previewRef={previewRef}
               />
-            </div>
-          )}
+            )}
+
+            {/* Botones siempre visibles */}
+            <EditActions
+              hasUnsavedChanges={hasUnsavedChanges}
+              onSave={handleSave}
+              onCancel={handleCancel}
+            />
+          </div>
         </div>
       </div>
     </div>
