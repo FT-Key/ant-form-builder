@@ -346,3 +346,13 @@ h6 {
     display: none;
   }
 }
+
+/* globals.css */
+.capture-cleanup * {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transform: none !important;
+  position: static !important;
+  line-height: 1.4 !important;
+  box-shadow: none !important;
+}
