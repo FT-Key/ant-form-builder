@@ -15,6 +15,7 @@ export default function PreviewArea({
     <div
       className="form-capture-area lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm min-h-96 relative"
       ref={previewRef}
+      style={{ fontFamily: "'Roboto', 'Helvetica Neue', 'Arial', sans-serif" }}
     >
       <div className="p-8">
         {manualCode.trim() ? (
