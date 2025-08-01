@@ -27,7 +27,7 @@ export default function AntdVersionSelector() {
         id="antd-version-select"
         value={antdVersion}
         onChange={(value: AntdVersion) => setAntdVersion(value)}
-        style={{ width: 200 }}
+        style={{ width: "100%" }}
         options={versions}
       />
     </div>

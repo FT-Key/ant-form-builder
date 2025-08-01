@@ -3,11 +3,11 @@ import { Form } from "antd";
 import ReactJsxParser from "react-jsx-parser";
 
 export default function PreviewArea({
-  manualCode,
+  code,
   components,
   previewRef,
 }: {
-  manualCode: string;
+  code: string;
   components: any;
   previewRef: any;
 }) {
@@ -18,18 +18,14 @@ export default function PreviewArea({
       style={{ fontFamily: "'Roboto', 'Helvetica Neue', 'Arial', sans-serif" }}
     >
       <div className="p-8">
-        {manualCode.trim() ? (
+        {code.trim() ? (
           <div className="bg-gray-50 rounded-lg p-8 border border-gray-100">
             <Form
               layout="vertical"
               className="max-w-lg mx-auto"
               onFinish={(values) => console.log("Form values:", values)}
             >
-              <ReactJsxParser
-                jsx={manualCode}
-                components={components}
-                key={manualCode}
-              />
+              <ReactJsxParser jsx={code} components={components} key={code} />
             </Form>
           </div>
         ) : (
