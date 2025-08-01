@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
-import { message } from "antd";
 import { toPng } from "html-to-image";
+import { message } from "antd";
 import type { AntdVersion } from "../context/AntdVersionContext";
 
 export function useFormBuilderLogic(
@@ -10,27 +8,29 @@ export function useFormBuilderLogic(
   getBaseCode: (v: AntdVersion) => string,
   jsxParserComponentsByVersion: Record<string, any>
 ) {
-  const components = jsxParserComponentsByVersion[antdVersion];
-  const previewRef = useRef<HTMLDivElement>(null);
-
   const [isStylesLoaded, setIsStylesLoaded] = useState(false);
-  const [prompt, setPrompt] = useState("");
-  const [manualCode, setManualCode] = useState("");
+  const [code, setCode] = useState("");
   const [localCode, setLocalCode] = useState("");
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [prompt, setPrompt] = useState("");
   const [versions, setVersions] = useState<any[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [editingMode, setEditingMode] = useState<"builder" | "code">("builder");
   const [activeVersionId, setActiveVersionId] = useState<number | null>(null);
   const [showCode, setShowCode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showVersionWarning, setShowVersionWarning] = useState(false);
-  const [prevAntdVersion, setPrevAntdVersion] = useState<string | null>(null);
+  const [prevAntdVersion, setPrevAntdVersion] = useState<AntdVersion | null>(
+    null
+  );
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const activeVersion = versions.find((v) => v.id === activeVersionId);
+  const components = jsxParserComponentsByVersion[antdVersion];
 
   useEffect(() => {
-    if (document.readyState === "complete") setIsStylesLoaded(true);
-    else {
+    if (document.readyState === "complete") {
+      setIsStylesLoaded(true);
+    } else {
       const onLoad = () => setIsStylesLoaded(true);
       window.addEventListener("load", onLoad);
       return () => window.removeEventListener("load", onLoad);
@@ -46,34 +46,20 @@ export function useFormBuilderLogic(
 
   useEffect(() => {
     const baseCode = getBaseCode(antdVersion);
-    setManualCode(baseCode);
+    setCode(baseCode);
   }, [antdVersion, getBaseCode]);
 
   useEffect(() => {
-    setLocalCode(manualCode);
-  }, [manualCode]);
+    setLocalCode(code);
+  }, [code]);
 
   useEffect(() => {
     const trimmedLocal = localCode.trim();
-    const trimmedCurrent = (activeVersion?.code || manualCode).trim();
+    const trimmedCurrent = (activeVersion?.code || code).trim();
     setHasUnsavedChanges(trimmedLocal !== trimmedCurrent);
-  }, [localCode, activeVersion, manualCode]);
+  }, [localCode, activeVersion, code]);
 
-  const buildMessages = () => {
-    const systemMessage = {
-      role: "system",
-      content:
-        "You generate React forms using Ant Design only. Use <Form>, <Form.Item>, <Input>, <Button>, etc. Return ONLY JSX code without explanations.",
-    };
-    const codeContext = {
-      role: "user",
-      content: `Current form code:\n${manualCode}`,
-    };
-    const baseMessages = activeVersion?.messages || [];
-    return [systemMessage, codeContext, ...baseMessages];
-  };
-
-  const handleInsert = (code: string, label: string) => {
+  const handleInsert = (insertedCode: string, label: string) => {
     const baseName = label.toLowerCase().replace(/\s+/g, "");
     const regex = new RegExp(`${baseName}(\\d*)`, "g");
     const matches = Array.from(localCode.matchAll(regex)).map((m) =>
@@ -81,7 +67,10 @@ export function useFormBuilderLogic(
     );
     const nextIndex = Math.max(0, ...matches) + 1;
     const uniqueName = `${baseName}${nextIndex}`;
-    const updated = code.replace(/name="[^"]*"/, `name="${uniqueName}"`);
+    const updated = insertedCode.replace(
+      /name="[^"]*"/,
+      `name="${uniqueName}"`
+    );
     setLocalCode((prev) => prev + "\n" + updated);
   };
 
@@ -94,21 +83,32 @@ export function useFormBuilderLogic(
       messages: activeVersion?.messages || [],
     };
     setVersions([...versions, newVersion]);
-    setManualCode(localCode);
+    setCode(localCode);
     setActiveVersionId(newVersion.id);
     setHasUnsavedChanges(false);
   };
 
   const handleCancel = () => {
-    setLocalCode(activeVersion?.code || manualCode);
+    setLocalCode(activeVersion?.code || code);
     setHasUnsavedChanges(false);
     setEditingMode("builder");
   };
 
   const handleClear = () => {
-    setManualCode("");
+    setCode("");
     setLocalCode("");
     setHasUnsavedChanges(true);
+  };
+
+  const handleVersionChange = (id: number) => {
+    const version = versions.find((v) => v.id === id);
+    if (version) {
+      setActiveVersionId(id);
+      setCode(version.code);
+      setLocalCode(version.code);
+      setEditingMode("builder");
+      setHasUnsavedChanges(false);
+    }
   };
 
   const handleDownloadImage = async () => {
@@ -129,48 +129,36 @@ export function useFormBuilderLogic(
     }
   };
 
-  const handleVersionChange = (id: number) => {
-    const version = versions.find((v) => v.id === id);
-    if (version) {
-      setActiveVersionId(id);
-      setManualCode(version.code);
-      setLocalCode(version.code);
-      setEditingMode("builder");
-      setHasUnsavedChanges(false);
-    }
-  };
-
   return {
-    previewRef,
-    prompt,
-    setPrompt,
-    manualCode,
-    setManualCode,
+    code,
+    setCode,
     localCode,
     setLocalCode,
-    hasUnsavedChanges,
+    prompt,
+    setPrompt,
     versions,
     setVersions,
-    editingMode,
-    setEditingMode,
     activeVersionId,
     setActiveVersionId,
+    hasUnsavedChanges,
+    setHasUnsavedChanges,
+    editingMode,
+    setEditingMode,
     showCode,
     setShowCode,
     isGenerating,
     setIsGenerating,
     showVersionWarning,
     setShowVersionWarning,
+    previewRef,
+    activeVersion,
+    components,
     handleInsert,
     handleSave,
     handleCancel,
     handleClear,
-    handleDownloadImage,
     handleVersionChange,
-    buildMessages,
-    components,
+    handleDownloadImage,
     isStylesLoaded,
-    activeVersion,
-    setHasUnsavedChanges,
   };
 }

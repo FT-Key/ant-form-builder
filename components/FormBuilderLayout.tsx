@@ -87,7 +87,7 @@ export default function FormBuilderLayout({
             <CodeEditor localCode={localCode} setLocalCode={setLocalCode} />
           ) : (
             <PreviewArea
-              manualCode={localCode}
+              code={localCode}
               components={components}
               previewRef={previewRef}
             />

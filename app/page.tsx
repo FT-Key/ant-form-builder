@@ -6,6 +6,7 @@ import FormBuilderLayout from "../components/FormBuilderLayout";
 import { useFormBuilderLogic } from "../hooks/useFormBuilderLogic";
 import { useAntdVersion } from "../context/AntdVersionContext";
 import { jsxParserComponentsByVersion } from "@/constants/antd/jsxParserComponentsByVersion";
+import { fetchGeneratedCode } from "@/utils/generateCode";
 
 export default function Home() {
   const { antdVersion, getBaseCode } = useAntdVersion();
@@ -23,68 +24,49 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white relative">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080801a_1px,transparent_1px),linear-gradient(to_bottom,#8080801a_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+
       <Header />
+
       <FormBuilderLayout
-        state={{
-          ...logic,
-        }}
+        state={logic}
         actions={{
+          ...logic,
           fetchGeneratedCode: async () => {
-            const userMessage = { role: "user", content: logic.prompt.trim() };
             if (!logic.prompt.trim()) return alert("Prompt vacío");
+
             logic.setIsGenerating(true);
+
             try {
-              const res = await fetch("/api/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  messages: logic.buildMessages().concat(userMessage),
-                }),
-              });
+              await fetchGeneratedCode(
+                logic.prompt,
+                logic.code,
+                logic.activeVersion,
+                logic.versions,
+                ({ code, messages, newVersionId }) => {
+                  const newVersion = {
+                    id: newVersionId,
+                    prompt: logic.prompt.trim(),
+                    code,
+                    messages,
+                  };
 
-              const data = await res.json();
-              if (data.error) {
-                alert("Error API: " + data.error);
-                return;
-              }
+                  logic.setVersions((prev) => [...prev, newVersion]);
+                  logic.setActiveVersionId(newVersionId);
+                  logic.setCode(code);
+                  logic.setLocalCode(code);
+                  logic.setPrompt("");
+                  logic.setShowCode(false);
+                  logic.setEditingMode("builder");
 
-              const maxId =
-                logic.versions.length > 0
-                  ? Math.max(...logic.versions.map((v) => v.id))
-                  : 0;
-
-              const rawCode = data.code || "";
-              const cleanedCode = rawCode.includes("<Form")
-                ? rawCode.replace(/<Form[^>]*>([\s\S]*?)<\/Form>/i, "$1").trim()
-                : rawCode;
-
-              const newVersion = {
-                id: maxId + 1,
-                prompt: logic.prompt.trim(),
-                code: cleanedCode,
-                messages: [
-                  ...(logic.activeVersion?.messages || []),
-                  userMessage,
-                  { role: "assistant", content: data.code },
-                ],
-              };
-
-              logic.setVersions((prev) => [...prev, newVersion]);
-              logic.setActiveVersionId(newVersion.id);
-              logic.setManualCode(cleanedCode);
-              logic.setLocalCode(cleanedCode);
-              logic.setPrompt("");
-              logic.setShowCode(false);
-              logic.setEditingMode("builder");
-
-              setTimeout(() => logic.setHasUnsavedChanges(false), 0);
+                  setTimeout(() => logic.setHasUnsavedChanges(false), 0);
+                }
+              );
             } catch (e) {
               alert("Error al generar: " + e);
             } finally {
               logic.setIsGenerating(false);
             }
           },
-          ...logic,
         }}
       />
     </div>
