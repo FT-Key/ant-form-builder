@@ -37,6 +37,7 @@ export default function Home() {
 
   const activeVersion = versions.find((v) => v.id === activeVersionId);
 
+  // Init styles
   useEffect(() => {
     if (document.readyState === "complete") {
       setIsStylesLoaded(true);
@@ -47,6 +48,7 @@ export default function Home() {
     }
   }, []);
 
+  // Antd version downgrade warning
   useEffect(() => {
     if (prevAntdVersion && antdVersion < prevAntdVersion) {
       setShowVersionWarning(true);
@@ -54,15 +56,90 @@ export default function Home() {
     setPrevAntdVersion(antdVersion);
   }, [antdVersion]);
 
+  // Set initial base code on load
+  useEffect(() => {
+    const baseCode = getBaseCode(antdVersion);
+    setManualCode(baseCode);
+  }, [antdVersion, getBaseCode]);
+
+  // Sync manual → local
   useEffect(() => {
     setLocalCode(manualCode);
   }, [manualCode]);
 
+  // Detect changes
   useEffect(() => {
     const trimmedLocal = localCode.trim();
     const trimmedCurrent = (activeVersion?.code || manualCode).trim();
     setHasUnsavedChanges(trimmedLocal !== trimmedCurrent);
   }, [localCode, activeVersion, manualCode]);
+
+  const buildMessages = () => {
+    const systemMessage = {
+      role: "system",
+      content:
+        "You generate React forms using Ant Design only. Use <Form>, <Form.Item>, <Input>, <Button>, etc. Return ONLY JSX code without explanations.",
+    };
+    const codeContext = {
+      role: "user",
+      content: `Current form code:\n${manualCode}`,
+    };
+    const baseMessages = activeVersion ? activeVersion.messages : [];
+    return [systemMessage, codeContext, ...baseMessages];
+  };
+
+  const fetchGeneratedCode = async () => {
+    if (!prompt.trim()) return alert("Prompt vacío");
+    setIsGenerating(true);
+
+    const userMessage = { role: "user", content: prompt.trim() };
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: buildMessages().concat(userMessage) }),
+      });
+
+      const data = await res.json();
+      if (data.error) {
+        alert("Error API: " + data.error);
+        return;
+      }
+
+      const maxId =
+        versions.length > 0 ? Math.max(...versions.map((v) => v.id)) : 0;
+      const rawCode = data.code || "";
+      const cleanedCode = rawCode.includes("<Form")
+        ? rawCode.replace(/<Form[^>]*>([\s\S]*?)<\/Form>/i, "$1").trim()
+        : rawCode;
+
+      const newVersion = {
+        id: maxId + 1,
+        prompt: prompt.trim(),
+        code: cleanedCode,
+        messages: [
+          ...(activeVersion?.messages || []),
+          userMessage,
+          { role: "assistant", content: data.code },
+        ],
+      };
+
+      setVersions((prev) => [...prev, newVersion]);
+      setActiveVersionId(newVersion.id);
+      setManualCode(cleanedCode);
+      setLocalCode(cleanedCode);
+      setPrompt("");
+      setShowCode(false);
+      setEditingMode("builder");
+
+      setTimeout(() => setHasUnsavedChanges(false), 0);
+    } catch (e) {
+      alert("Error al generar: " + e);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleInsert = (code: string, label: string) => {
     const baseName = label.toLowerCase().replace(/\s+/g, "");
@@ -122,7 +199,7 @@ export default function Home() {
         pixelRatio: 2,
       });
       const link = document.createElement("a");
-      link.download = "form-preview.png";
+      link.download = `form-version-${activeVersionId ?? "latest"}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -152,7 +229,7 @@ export default function Home() {
         <PromptInput
           prompt={prompt}
           setPrompt={setPrompt}
-          onGenerate={() => {}}
+          onGenerate={fetchGeneratedCode}
           isGenerating={isGenerating}
         />
 
@@ -196,16 +273,13 @@ export default function Home() {
               />
             )}
 
-            <div className="flex justify-between items-center">
-              <EditActions
-                hasUnsavedChanges={hasUnsavedChanges}
-                onSave={handleSave}
-                onCancel={handleCancel}
-              />
-              <Button danger icon={<DeleteOutlined />} onClick={handleClear}>
-                Clear Code
-              </Button>
-            </div>
+            <EditActions
+              hasUnsavedChanges={hasUnsavedChanges}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              onClear={handleClear}
+            />
+
             {showVersionWarning && (
               <Alert
                 type="warning"
