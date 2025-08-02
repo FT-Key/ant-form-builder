@@ -113,7 +113,7 @@ export const v3: FormComponent[] = [
   },
 ];
 
-const v4: FormComponent[] = [
+export const v4: FormComponent[] = [
   ...v3,
   {
     label: "Form List (no preview)",

@@ -105,6 +105,20 @@ export default function Home() {
     setPrevAntdVersion(antdVersion);
   }, [antdVersion]);
 
+  const handleUpdateInput = useCallback(
+    (inputId: string, newCodeBlock: string) => {
+      const updatedBlocks = inputsBlocks.map((block, index) => {
+        const id = inputs[index].id;
+        return id === inputId ? newCodeBlock : block;
+      });
+
+      const updatedCode = updatedBlocks.join("\n");
+      setCode(updatedCode);
+      setHasUnsavedChanges(true);
+    },
+    [inputs, inputsBlocks]
+  );
+
   // Handlers versiones y código
   const handleVersionChange = (id: number) => {
     const version = versions.find((v) => v.id === id);
@@ -189,6 +203,11 @@ export default function Home() {
     }
   };
 
+  const getCodeBlockByInputId = (id: string) => {
+    const index = inputs.findIndex((input) => input.id === id);
+    return inputsBlocks[index];
+  };
+
   if (!isStylesLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
@@ -250,7 +269,12 @@ export default function Home() {
             </div>
 
             <div className="lg:col-span-3">
-              <InputList inputs={inputs} onReorder={reorderCodeByInputIds} />
+              <InputList
+                inputs={inputs}
+                onReorder={reorderCodeByInputIds}
+                onUpdateInput={handleUpdateInput}
+                getCodeBlockByInputId={getCodeBlockByInputId}
+              />
             </div>
 
             <div className="lg:col-span-7 space-y-4">

@@ -1,19 +1,51 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   DragDropContext,
   Droppable,
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
+import { EditOutlined } from "@ant-design/icons";
 
-interface InputListProps {
-  inputs: { id: string; label: string }[];
-  onReorder: (newOrder: string[]) => void;
+// Importa los modales desde el index.ts centralizado
+import {
+  InputTextModal,
+  InputPasswordModal,
+  InputTextareaModal,
+} from "./modals";
+
+interface InputItem {
+  id: string;
+  label: string;
 }
 
-export default function InputList({ inputs, onReorder }: InputListProps) {
+interface InputListProps {
+  inputs: InputItem[];
+  onReorder: (newOrder: string[]) => void;
+  onUpdateInput: (id: string, newCodeBlock: string) => void;
+  getCodeBlockByInputId: (id: string) => string;
+}
+
+export default function InputList({
+  inputs,
+  onReorder,
+  onUpdateInput,
+  getCodeBlockByInputId,
+}: InputListProps) {
+  const [editingInputId, setEditingInputId] = useState<string | null>(null);
+
+  // Función para detectar tipo de input por código (agrega más según necesites)
+  const getInputType = (
+    codeBlock: string
+  ): "text" | "password" | "textarea" | "other" => {
+    if (codeBlock.includes("<Input.Password")) return "password";
+    if (codeBlock.includes("<Input.TextArea")) return "textarea";
+    if (codeBlock.includes("<Input")) return "text";
+    return "other";
+  };
+
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
@@ -24,37 +56,90 @@ export default function InputList({ inputs, onReorder }: InputListProps) {
     onReorder(newInputs.map((i) => i.id));
   };
 
+  const handleEditClick = (id: string) => {
+    setEditingInputId(id);
+  };
+
+  const handleSave = (newCodeBlock: string) => {
+    if (editingInputId) {
+      onUpdateInput(editingInputId, newCodeBlock);
+      setEditingInputId(null);
+    }
+  };
+
+  // Código y tipo de input seleccionado
+  const codeBlock = editingInputId ? getCodeBlockByInputId(editingInputId) : "";
+  const inputType = editingInputId ? getInputType(codeBlock) : null;
+
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
-      <Droppable droppableId="input-list">
-        {(provided) => (
-          <div
-            {...provided.droppableProps}
-            ref={provided.innerRef}
-            className="space-y-2 bg-gray-50 p-4 rounded border border-gray-300 min-h-[300px]"
-          >
-            {inputs.map(({ id, label }, index) => (
-              <Draggable key={id} draggableId={id} index={index}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    {...provided.dragHandleProps}
-                    className={`p-3 rounded border ${
-                      snapshot.isDragging
-                        ? "bg-blue-100 border-blue-500"
-                        : "bg-white"
-                    } cursor-move`}
-                  >
-                    {label}
-                  </div>
-                )}
-              </Draggable>
-            ))}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
-    </DragDropContext>
+    <>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="input-list">
+          {(provided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="space-y-2 bg-gray-50 p-4 rounded border border-gray-300 min-h-[300px]"
+            >
+              {inputs.map(({ id, label }, index) => (
+                <Draggable key={id} draggableId={id} index={index}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className={`p-3 rounded border flex justify-between items-center ${
+                        snapshot.isDragging
+                          ? "bg-blue-100 border-blue-500"
+                          : "bg-white"
+                      }`}
+                    >
+                      <div
+                        {...provided.dragHandleProps}
+                        className="cursor-move"
+                      >
+                        {label}
+                      </div>
+                      <EditOutlined
+                        className="text-gray-500 hover:text-blue-600 cursor-pointer"
+                        onClick={() => handleEditClick(id)}
+                      />
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
+
+      {/* Modales según tipo de input */}
+      {inputType === "text" && editingInputId && (
+        <InputTextModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "password" && editingInputId && (
+        <InputPasswordModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "textarea" && editingInputId && (
+        <InputTextareaModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+    </>
   );
 }
