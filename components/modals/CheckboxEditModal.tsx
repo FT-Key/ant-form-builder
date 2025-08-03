@@ -33,81 +33,52 @@ export default function CheckboxEditModal({
   const [label, setLabel] = useState("");
   const [name, setName] = useState("");
   const [checked, setChecked] = useState(false);
-  const [defaultChecked, setDefaultChecked] = useState(false);
 
   // Opciones avanzadas
   const [disabled, setDisabled] = useState(false);
   const [indeterminate, setIndeterminate] = useState(false);
   const [autoFocus, setAutoFocus] = useState(false);
-  const [value, setValue] = useState(""); // valor string para checkbox, si se usa en grupo
   const [inputId, setInputId] = useState("");
   const [readOnly, setReadOnly] = useState(false);
-  const [tabIndex, setTabIndex] = useState<number | undefined>(undefined);
-  const [ariaLabel, setAriaLabel] = useState("");
-  const [ariaLabelledBy, setAriaLabelledBy] = useState("");
-  const [ariaDescribedBy, setAriaDescribedBy] = useState("");
   const [status, setStatus] = useState<"" | "error" | "warning">("");
 
-  // Detectar y parsear props desde el código recibido
   useEffect(() => {
-    // label es contenido dentro del <Checkbox>...</Checkbox>
     const labelMatch = codeBlock.match(/<Checkbox[^>]*>([^<]+)<\/Checkbox>/);
     const nameMatch = codeBlock.match(/name="([^"]*)"/);
     const checkedMatch = /checked={true}/.test(codeBlock);
-    const defaultCheckedMatch = /defaultChecked={true}/.test(codeBlock);
     const disabledMatch = /disabled/.test(codeBlock);
     const indeterminateMatch = /indeterminate/.test(codeBlock);
     const autoFocusMatch = /autoFocus/.test(codeBlock);
-    const valueMatch = codeBlock.match(/value="([^"]*)"/);
     const idMatch = codeBlock.match(/id="([^"]*)"/);
     const readOnlyMatch = /readOnly/.test(codeBlock);
-    const tabIndexMatch = codeBlock.match(/tabIndex={(\-?\d+)}/);
-    const ariaLabelMatch = codeBlock.match(/aria-label="([^"]*)"/);
-    const ariaLabelledByMatch = codeBlock.match(/aria-labelledby="([^"]*)"/);
-    const ariaDescribedByMatch = codeBlock.match(/aria-describedby="([^"]*)"/);
     const statusMatch = codeBlock.match(/status="(error|warning)"/);
 
-    setLabel(labelMatch ? labelMatch[1] : "");
+    setLabel(labelMatch?.[1] || "");
     setName(nameMatch?.[1] || "");
     setChecked(checkedMatch);
-    setDefaultChecked(defaultCheckedMatch);
     setDisabled(disabledMatch);
     setIndeterminate(indeterminateMatch);
     setAutoFocus(autoFocusMatch);
-    setValue(valueMatch?.[1] || "");
     setInputId(idMatch?.[1] || "");
     setReadOnly(readOnlyMatch);
-    setTabIndex(tabIndexMatch ? Number(tabIndexMatch[1]) : undefined);
-    setAriaLabel(ariaLabelMatch?.[1] || "");
-    setAriaLabelledBy(ariaLabelledByMatch?.[1] || "");
-    setAriaDescribedBy(ariaDescribedByMatch?.[1] || "");
-
-    const statusValue = statusMatch?.[1];
     setStatus(
-      statusValue === "error" || statusValue === "warning" ? statusValue : ""
+      statusMatch?.[1] === "error" || statusMatch?.[1] === "warning"
+        ? statusMatch[1]
+        : ""
     );
   }, [codeBlock]);
 
-  // Construir código JSX con las props seleccionadas
   const buildCode = () => {
     const props: string[] = [];
 
     if (name) props.push(`name="${name}"`);
     if (checked) props.push(`checked={true}`);
-    if (defaultChecked) props.push(`defaultChecked={true}`);
     if (disabled) props.push("disabled");
     if (indeterminate) props.push("indeterminate");
     if (autoFocus) props.push("autoFocus");
-    if (value) props.push(`value="${value}"`);
     if (inputId) props.push(`id="${inputId}"`);
     if (readOnly) props.push("readOnly");
-    if (tabIndex !== undefined) props.push(`tabIndex={${tabIndex}}`);
-    if (ariaLabel) props.push(`aria-label="${ariaLabel}"`);
-    if (ariaLabelledBy) props.push(`aria-labelledby="${ariaLabelledBy}"`);
-    if (ariaDescribedBy) props.push(`aria-describedby="${ariaDescribedBy}"`);
     if (antdVersion !== "v3" && status) props.push(`status="${status}"`);
-
-    // Nota: no incluimos onChange por ser función
 
     return `<Form.Item${name ? ` name="${name}"` : ""}>
   <Checkbox ${props.join(" ")}>${label}</Checkbox>
@@ -146,13 +117,6 @@ export default function CheckboxEditModal({
         >
           checked
         </AntdCheckbox>
-        <AntdCheckbox
-          checked={defaultChecked}
-          onChange={(e) => setDefaultChecked(e.target.checked)}
-          className="mb-2"
-        >
-          defaultChecked
-        </AntdCheckbox>
 
         <Divider />
 
@@ -180,13 +144,6 @@ export default function CheckboxEditModal({
               autoFocus
             </AntdCheckbox>
             <Input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="value"
-              addonBefore="value"
-              className="mb-2"
-            />
-            <Input
               value={inputId}
               onChange={(e) => setInputId(e.target.value)}
               placeholder="ID"
@@ -200,39 +157,6 @@ export default function CheckboxEditModal({
             >
               readOnly
             </AntdCheckbox>
-            <Input
-              type="number"
-              value={tabIndex !== undefined ? tabIndex : ""}
-              onChange={(e) =>
-                setTabIndex(
-                  e.target.value === "" ? undefined : Number(e.target.value)
-                )
-              }
-              placeholder="tabIndex"
-              addonBefore="tabIndex"
-              className="mb-2"
-            />
-            <Input
-              value={ariaLabel}
-              onChange={(e) => setAriaLabel(e.target.value)}
-              placeholder="aria-label"
-              addonBefore="aria-label"
-              className="mb-2"
-            />
-            <Input
-              value={ariaLabelledBy}
-              onChange={(e) => setAriaLabelledBy(e.target.value)}
-              placeholder="aria-labelledby"
-              addonBefore="aria-labelledby"
-              className="mb-2"
-            />
-            <Input
-              value={ariaDescribedBy}
-              onChange={(e) => setAriaDescribedBy(e.target.value)}
-              placeholder="aria-describedby"
-              addonBefore="aria-describedby"
-              className="mb-2"
-            />
 
             {antdVersion !== "v3" && (
               <div>

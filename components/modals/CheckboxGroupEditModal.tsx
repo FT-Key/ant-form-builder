@@ -36,16 +36,15 @@ export default function CheckboxGroupEditModal({
 }: CheckboxGroupEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
-  // Estados principales
+  // Estados
   const [label, setLabel] = useState("");
   const [name, setName] = useState("");
   const [options, setOptions] = useState<OptionItem[]>([]);
-  const [defaultValue, setDefaultValue] = useState<string[]>([]);
   const [disabled, setDisabled] = useState(false);
   const [inputId, setInputId] = useState("");
   const [status, setStatus] = useState<"" | "error" | "warning">("");
 
-  // Parsear props desde el código recibido
+  // Parseo del código entrante
   useEffect(() => {
     const labelMatch = codeBlock.match(/label="([^"]*)"/);
     const nameMatch = codeBlock.match(/name="([^"]*)"/);
@@ -57,23 +56,25 @@ export default function CheckboxGroupEditModal({
     let parsedOptions: OptionItem[] = [];
     if (optionsMatch) {
       try {
-        const jsonStr = optionsMatch[1]
-          .replace(/([a-zA-Z0-9]+):/g, '"$1":')
-          .replace(/'/g, '"');
-        parsedOptions = JSON.parse(jsonStr);
+        const rawStr = optionsMatch[1];
+
+        // Detecta si es un array de strings
+        const isStringArray = /^(\s*'[^']*'\s*,?)*$/.test(
+          rawStr.replace(/[\[\]\s]/g, "").replace(/"([^"]*)"/g, "'$1'")
+        );
+
+        if (isStringArray) {
+          const strArray = JSON.parse(rawStr.replace(/'/g, '"')) as string[];
+          parsedOptions = strArray.map((val) => ({ label: val, value: val }));
+        } else {
+          // Asumimos que es un array de objetos
+          const jsonStr = rawStr
+            .replace(/([a-zA-Z0-9]+):/g, '"$1":')
+            .replace(/'/g, '"');
+          parsedOptions = JSON.parse(jsonStr);
+        }
       } catch {
         parsedOptions = [];
-      }
-    }
-
-    const defaultValueMatch = codeBlock.match(/defaultValue=\{(\[[^\]]*\])\}/);
-    let parsedDefaultValue: string[] = [];
-    if (defaultValueMatch) {
-      try {
-        const dvStr = defaultValueMatch[1].replace(/'/g, '"');
-        parsedDefaultValue = JSON.parse(dvStr);
-      } catch {
-        parsedDefaultValue = [];
       }
     }
 
@@ -82,16 +83,14 @@ export default function CheckboxGroupEditModal({
     setDisabled(disabledMatch);
     setInputId(idMatch?.[1] || "");
     setStatus(
-      statusMatch &&
-        (statusMatch[1] === "error" || statusMatch[1] === "warning")
+      statusMatch?.[1] === "error" || statusMatch?.[1] === "warning"
         ? statusMatch[1]
         : ""
     );
     setOptions(parsedOptions);
-    setDefaultValue(parsedDefaultValue);
   }, [codeBlock]);
 
-  // Opciones dinámicas
+  // CRUD de opciones
   const updateOption = (
     index: number,
     field: keyof OptionItem,
@@ -109,13 +108,9 @@ export default function CheckboxGroupEditModal({
   const removeOption = (index: number) => {
     const newOptions = options.filter((_, i) => i !== index);
     setOptions(newOptions);
-    // Limpiar defaultValue que ya no existe
-    setDefaultValue((prev) =>
-      prev.filter((v) => newOptions.some((opt) => opt.value === v))
-    );
   };
 
-  // Construir JSX actualizado
+  // Generar JSX
   const buildCode = () => {
     const props: string[] = [];
 
@@ -124,27 +119,19 @@ export default function CheckboxGroupEditModal({
     if (inputId) props.push(`id="${inputId}"`);
     if (antdVersion !== "v3" && status) props.push(`status="${status}"`);
 
-    // Options stringify para JSX
-    const optionsString = options.length
-      ? `[${options
-          .map(
-            (opt) =>
-              `{ label: '${opt.label.replace(
-                /'/g,
-                "\\'"
-              )}', value: '${opt.value.replace(/'/g, "\\'")}' }`
-          )
-          .join(", ")}]`
-      : "[]";
+    const optionsString = `[${options
+      .map(
+        (opt) =>
+          `{ label: '${opt.label.replace(
+            /'/g,
+            "\\'"
+          )}', value: '${opt.value.replace(/'/g, "\\'")}' }`
+      )
+      .join(", ")}]`;
 
     props.push(`options={${optionsString}}`);
 
-    if (defaultValue.length > 0) {
-      const dvString = `[${defaultValue.map((v) => `'${v}'`).join(", ")}]`;
-      props.push(`defaultValue={${dvString}}`);
-    }
-
-    return `<Form.Item label="${label}">
+    return `<Form.Item label="${label}" name="${name}">
   <Checkbox.Group ${props.join(" ")} />
 </Form.Item>`;
   };
@@ -162,16 +149,15 @@ export default function CheckboxGroupEditModal({
     >
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
+
         <Input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Etiqueta del Form.Item"
           addonBefore="label"
         />
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre (name)"
           addonBefore="name"
         />
         <Checkbox
@@ -184,55 +170,40 @@ export default function CheckboxGroupEditModal({
         <Divider />
 
         <Collapse ghost>
-          <Panel header="Opciones" key="options">
-            {options.map((opt, idx) => (
-              <Space key={idx} align="baseline" className="mb-2">
-                <Input
-                  placeholder="Label"
-                  value={opt.label}
-                  onChange={(e) => updateOption(idx, "label", e.target.value)}
-                  style={{ width: 180 }}
-                />
-                <Input
-                  placeholder="Value"
-                  value={opt.value}
-                  onChange={(e) => updateOption(idx, "value", e.target.value)}
-                  style={{ width: 180 }}
-                />
-                <Button danger onClick={() => removeOption(idx)}>
-                  Eliminar
-                </Button>
-              </Space>
-            ))}
+          <Panel header="Opciones avanzadas" key="1">
+            <div className="mb-4">
+              <label className="block mb-2 font-medium">Opciones</label>
+              {options.map((opt, idx) => (
+                <Space key={idx} align="baseline" className="mb-2">
+                  <Input
+                    placeholder="Label"
+                    value={opt.label}
+                    onChange={(e) => updateOption(idx, "label", e.target.value)}
+                    style={{ width: 180 }}
+                  />
+                  <Input
+                    placeholder="Value"
+                    value={opt.value}
+                    onChange={(e) => updateOption(idx, "value", e.target.value)}
+                    style={{ width: 180 }}
+                  />
+                  <Button danger onClick={() => removeOption(idx)}>
+                    Eliminar
+                  </Button>
+                </Space>
+              ))}
+              <Button type="dashed" block onClick={addOption}>
+                + Agregar opción
+              </Button>
+            </div>
 
-            <Button type="dashed" block onClick={addOption}>
-              + Agregar opción
-            </Button>
-          </Panel>
-
-          <Panel header="Valores por defecto" key="defaultValues">
-            <Input
-              placeholder="Valores por defecto separados por coma"
-              value={defaultValue.join(",")}
-              onChange={(e) =>
-                setDefaultValue(
-                  e.target.value
-                    .split(",")
-                    .map((v) => v.trim())
-                    .filter(Boolean)
-                )
-              }
-            />
-          </Panel>
-
-          <Panel header="Avanzado" key="advanced">
             <Input
               value={inputId}
               onChange={(e) => setInputId(e.target.value)}
-              placeholder="ID"
               addonBefore="id"
               className="mb-2"
             />
+
             {antdVersion !== "v3" && (
               <div>
                 <label className="block mb-1">Estado</label>

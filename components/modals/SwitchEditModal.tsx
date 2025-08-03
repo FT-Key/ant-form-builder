@@ -1,10 +1,19 @@
 "use client";
 
-import { Modal, Input, Switch, Select, Divider, Checkbox } from "antd";
+import {
+  Modal,
+  Input,
+  Switch,
+  Select,
+  Divider,
+  Checkbox,
+  Collapse,
+} from "antd";
 import { useEffect, useState } from "react";
 import { useAntdVersion } from "@/context/AntdVersionContext";
 
 const { Option } = Select;
+const { Panel } = Collapse;
 
 interface SwitchEditModalProps {
   open: boolean;
@@ -35,33 +44,28 @@ export default function SwitchEditModal({
   const [status, setStatus] = useState<"" | "error" | "warning">("");
 
   useEffect(() => {
-    const labelMatch = codeBlock.match(/label="([^"]*)"/);
-    const nameMatch = codeBlock.match(/name="([^"]*)"/);
-    const checkedChildrenMatch = codeBlock.match(/checkedChildren="([^"]*)"/);
-    const unCheckedChildrenMatch = codeBlock.match(
-      /unCheckedChildren="([^"]*)"/
-    );
-    const disabledMatch = /disabled/.test(codeBlock);
-    const loadingMatch = /loading/.test(codeBlock);
-    const sizeMatch = codeBlock.match(/size="(default|small)"/);
-    const idMatch = codeBlock.match(/id="([^"]+)"/);
-    const checkedMatch = /checked/.test(codeBlock);
-    const statusMatch = codeBlock.match(/status="(error|warning)"/);
+    const matchAttr = (attr: string) =>
+      codeBlock.match(new RegExp(`${attr}="([^"]*)"`))?.[1] || "";
 
-    setLabel(labelMatch?.[1] || "");
-    setName(nameMatch?.[1] || "");
-    setCheckedChildren(checkedChildrenMatch?.[1] || null);
-    setUnCheckedChildren(unCheckedChildrenMatch?.[1] || null);
-    setDisabled(disabledMatch);
-    setLoading(loadingMatch);
-    setSize(sizeMatch?.[1] === "small" ? "small" : "default");
-    setInputId(idMatch?.[1] || "");
-    setChecked(checkedMatch);
+    const labelMatch = matchAttr("label");
+    const nameMatch = matchAttr("name");
+    const checkedChildrenMatch = matchAttr("checkedChildren");
+    const unCheckedChildrenMatch = matchAttr("unCheckedChildren");
+    const sizeMatch = codeBlock.match(/size="(default|small)"/)?.[1];
+    const idMatch = matchAttr("id");
+    const statusMatch = codeBlock.match(/status="(error|warning)"/)?.[1];
+
+    setLabel(labelMatch);
+    setName(nameMatch);
+    setCheckedChildren(checkedChildrenMatch || null);
+    setUnCheckedChildren(unCheckedChildrenMatch || null);
+    setDisabled(codeBlock.includes("disabled"));
+    setLoading(codeBlock.includes("loading"));
+    setSize(sizeMatch === "small" ? "small" : "default");
+    setInputId(idMatch);
+    setChecked(codeBlock.includes("checked"));
     setStatus(
-      statusMatch &&
-        (statusMatch[1] === "error" || statusMatch[1] === "warning")
-        ? statusMatch[1]
-        : ""
+      statusMatch === "error" || statusMatch === "warning" ? statusMatch : ""
     );
   }, [codeBlock]);
 
@@ -79,7 +83,7 @@ export default function SwitchEditModal({
     if (checked) props.push("checked");
     if (antdVersion !== "v3" && status) props.push(`status="${status}"`);
 
-    return `<Form.Item label="${label}">
+    return `<Form.Item label="${label}" name="${name}">
   <Switch ${props.join(" ")} />
 </Form.Item>`;
   };
@@ -93,77 +97,97 @@ export default function SwitchEditModal({
       okText="Guardar"
       cancelText="Cancelar"
       width={500}
+      destroyOnClose
     >
       <div className="space-y-4">
+        <Divider>Campos básicos</Divider>
+
         <Input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Etiqueta del Form.Item"
+          addonBefore="label"
         />
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre (name)"
+          addonBefore="name"
         />
-        <Checkbox
-          checked={checked}
-          onChange={(e) => setChecked(e.target.checked)}
-        >
-          checked (solo para referencia, no controla el valor en runtime)
-        </Checkbox>
-        <Checkbox
-          checked={disabled}
-          onChange={(e) => setDisabled(e.target.checked)}
-        >
-          disabled
-        </Checkbox>
-        <Checkbox
-          checked={loading}
-          onChange={(e) => setLoading(e.target.checked)}
-        >
-          loading
-        </Checkbox>
-        <Input
-          value={checkedChildren || ""}
-          onChange={(e) => setCheckedChildren(e.target.value || null)}
-          placeholder="checkedChildren"
-        />
-        <Input
-          value={unCheckedChildren || ""}
-          onChange={(e) => setUnCheckedChildren(e.target.value || null)}
-          placeholder="unCheckedChildren"
-        />
-        <div>
-          <label className="block mb-1">Tamaño (size)</label>
-          <Select
-            value={size}
-            onChange={(value) => setSize(value)}
-            style={{ width: "100%" }}
-          >
-            <Option value="default">default</Option>
-            <Option value="small">small</Option>
-          </Select>
-        </div>
-        <Input
-          value={inputId}
-          onChange={(e) => setInputId(e.target.value)}
-          placeholder="ID"
-          addonBefore="id"
-        />
-        {antdVersion !== "v3" && (
-          <div>
-            <label className="block mb-1">Estado</label>
-            <Select
-              value={status}
-              onChange={setStatus}
-              style={{ width: "100%" }}
-              allowClear
+
+        <Divider />
+
+        <Collapse ghost>
+          <Panel header="Opciones avanzadas" key="1">
+            <Checkbox
+              checked={checked}
+              onChange={(e) => setChecked(e.target.checked)}
+              className="mb-2"
             >
-              <Option value="error">error</Option>
-              <Option value="warning">warning</Option>
-            </Select>
-          </div>
-        )}
+              checked (referencia visual)
+            </Checkbox>
+            <Checkbox
+              checked={disabled}
+              onChange={(e) => setDisabled(e.target.checked)}
+              className="mb-2"
+            >
+              disabled
+            </Checkbox>
+            <Checkbox
+              checked={loading}
+              onChange={(e) => setLoading(e.target.checked)}
+              className="mb-2"
+            >
+              loading
+            </Checkbox>
+
+            <Input
+              value={checkedChildren || ""}
+              onChange={(e) => setCheckedChildren(e.target.value || null)}
+              addonBefore="checkedChildren"
+              className="mb-2"
+            />
+            <Input
+              value={unCheckedChildren || ""}
+              onChange={(e) => setUnCheckedChildren(e.target.value || null)}
+              addonBefore="unCheckedChildren"
+              className="mb-2"
+            />
+
+            <div className="mb-2">
+              <label className="block mb-1">Tamaño</label>
+              <Select
+                value={size}
+                onChange={(value) => setSize(value)}
+                style={{ width: "100%" }}
+              >
+                <Option value="default">default</Option>
+                <Option value="small">small</Option>
+              </Select>
+            </div>
+
+            <Input
+              value={inputId}
+              onChange={(e) => setInputId(e.target.value)}
+              addonBefore="id"
+              className="mb-2"
+            />
+
+            {antdVersion !== "v3" && (
+              <div>
+                <label className="block mb-1">Estado</label>
+                <Select
+                  value={status}
+                  onChange={setStatus}
+                  style={{ width: "100%" }}
+                  allowClear
+                >
+                  <Option value="">none</Option>
+                  <Option value="error">error</Option>
+                  <Option value="warning">warning</Option>
+                </Select>
+              </div>
+            )}
+          </Panel>
+        </Collapse>
       </div>
     </Modal>
   );

@@ -48,7 +48,7 @@ export default function InputList({
 
   // Detecta el tipo de input según el código
   const getInputType = (
-    codeBlock: string
+    codeBlock?: string
   ):
     | "text"
     | "password"
@@ -64,6 +64,8 @@ export default function InputList({
     | "switch"
     | "upload"
     | "other" => {
+    if (!codeBlock) return "other";
+
     if (codeBlock.includes("<Input.Password")) return "password";
     if (codeBlock.includes("<Input.TextArea")) return "textarea";
     if (codeBlock.includes("<InputNumber")) return "inputnumber";
@@ -77,6 +79,7 @@ export default function InputList({
     if (codeBlock.includes("<Switch")) return "switch";
     if (codeBlock.includes("<Upload")) return "upload";
     if (codeBlock.includes("<Input")) return "text";
+
     return "other";
   };
 

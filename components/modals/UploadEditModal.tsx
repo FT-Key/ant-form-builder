@@ -1,10 +1,11 @@
 "use client";
 
-import { Modal, Input, Select, Divider, Checkbox } from "antd";
+import { Modal, Input, Select, Divider, Checkbox, Collapse } from "antd";
 import { useEffect, useState } from "react";
 import { useAntdVersion } from "@/context/AntdVersionContext";
 
 const { Option } = Select;
+const { Panel } = Collapse;
 
 interface UploadEditModalProps {
   open: boolean;
@@ -30,6 +31,7 @@ export default function UploadEditModal({
   const [listType, setListType] = useState<"text" | "picture" | "picture-card">(
     "text"
   );
+  const [drag, setDrag] = useState(false);
   const [inputId, setInputId] = useState("");
   const [status, setStatus] = useState<"" | "error" | "warning">("");
 
@@ -39,10 +41,13 @@ export default function UploadEditModal({
     const actionMatch = codeBlock.match(/action="([^"]*)"/);
     const multipleMatch = /multiple/.test(codeBlock);
     const disabledMatch = /disabled/.test(codeBlock);
-    const showUploadListMatch = /showUploadList/.test(codeBlock);
+    const showUploadListMatch = codeBlock.match(
+      /showUploadList(?:={(false|true)})?/
+    );
     const listTypeMatch = codeBlock.match(
       /listType="(text|picture|picture-card)"/
     );
+    const isDragger = /<Upload\.Dragger/.test(codeBlock);
     const idMatch = codeBlock.match(/id="([^"]+)"/);
     const statusMatch = codeBlock.match(/status="(error|warning)"/);
 
@@ -51,21 +56,22 @@ export default function UploadEditModal({
     setAction(actionMatch?.[1] || "");
     setMultiple(multipleMatch);
     setDisabled(disabledMatch);
-    setShowUploadList(showUploadListMatch);
-    const listTypeValue = listTypeMatch?.[1];
-    if (
-      listTypeValue === "text" ||
-      listTypeValue === "picture" ||
-      listTypeValue === "picture-card"
-    ) {
-      setListType(listTypeValue);
-    } else {
-      setListType("text");
-    }
+    setShowUploadList(
+      showUploadListMatch?.[1] === "false"
+        ? false
+        : showUploadListMatch
+        ? true
+        : true // default visible
+    );
+    setDrag(isDragger);
+    setListType(
+      listTypeMatch?.[1] === "picture" || listTypeMatch?.[1] === "picture-card"
+        ? listTypeMatch[1]
+        : "text"
+    );
     setInputId(idMatch?.[1] || "");
     setStatus(
-      statusMatch &&
-        (statusMatch[1] === "error" || statusMatch[1] === "warning")
+      statusMatch?.[1] === "error" || statusMatch?.[1] === "warning"
         ? statusMatch[1]
         : ""
     );
@@ -78,14 +84,29 @@ export default function UploadEditModal({
     if (action) props.push(`action="${action}"`);
     if (multiple) props.push("multiple");
     if (disabled) props.push("disabled");
-    if (showUploadList) props.push("showUploadList");
-    else props.push("showUploadList={false}");
-    if (listType && listType !== "text") props.push(`listType="${listType}"`);
+    if (!showUploadList) props.push("showUploadList={false}");
+    if (listType !== "text") props.push(`listType="${listType}"`);
     if (inputId) props.push(`id="${inputId}"`);
     if (antdVersion !== "v3" && status) props.push(`status="${status}"`);
 
-    return `<Form.Item label="${label}">
-  <Upload ${props.join(" ")} />
+    const propsStr = props.join(" ");
+
+    // Si está en modo drag
+    if (drag) {
+      return `<Form.Item label="${label}" name="${name}">
+  <Upload.Dragger ${propsStr}>
+    <p style={{ textAlign: 'center' }}>
+      <span>Haz clic o arrastra archivos aquí para subir</span>
+    </p>
+  </Upload.Dragger>
+</Form.Item>`;
+    }
+
+    // Upload normal
+    return `<Form.Item label="${label}" name="${name}">
+  <Upload ${propsStr}>
+    <Button type="primary">Subir archivo</Button>
+  </Upload>
 </Form.Item>`;
   };
 
@@ -98,76 +119,96 @@ export default function UploadEditModal({
       okText="Guardar"
       cancelText="Cancelar"
       width={600}
+      destroyOnClose
     >
       <div className="space-y-4">
+        <Divider>Campos básicos</Divider>
         <Input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="Etiqueta del Form.Item"
+          addonBefore="label"
         />
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre (name)"
+          addonBefore="name"
         />
         <Input
           value={action}
           onChange={(e) => setAction(e.target.value)}
-          placeholder="Propiedad action (URL)"
-        />
-        <Checkbox
-          checked={multiple}
-          onChange={(e) => setMultiple(e.target.checked)}
-        >
-          multiple
-        </Checkbox>
-        <Checkbox
-          checked={disabled}
-          onChange={(e) => setDisabled(e.target.checked)}
-        >
-          disabled
-        </Checkbox>
-        <Checkbox
-          checked={showUploadList}
-          onChange={(e) => setShowUploadList(e.target.checked)}
-        >
-          showUploadList
-        </Checkbox>
-
-        <div>
-          <label className="block mb-1">listType</label>
-          <Select
-            value={listType}
-            onChange={(value) => setListType(value)}
-            style={{ width: "100%" }}
-          >
-            <Option value="text">text</Option>
-            <Option value="picture">picture</Option>
-            <Option value="picture-card">picture-card</Option>
-          </Select>
-        </div>
-
-        <Input
-          value={inputId}
-          onChange={(e) => setInputId(e.target.value)}
-          placeholder="ID"
-          addonBefore="id"
+          addonBefore="action"
         />
 
-        {antdVersion !== "v3" && (
-          <div>
-            <label className="block mb-1">Estado</label>
-            <Select
-              value={status}
-              onChange={setStatus}
-              style={{ width: "100%" }}
-              allowClear
+        <Divider />
+
+        <Collapse ghost>
+          <Panel header="Opciones avanzadas" key="advanced">
+            <Checkbox
+              checked={multiple}
+              onChange={(e) => setMultiple(e.target.checked)}
+              className="mb-2"
             >
-              <Option value="error">error</Option>
-              <Option value="warning">warning</Option>
-            </Select>
-          </div>
-        )}
+              multiple
+            </Checkbox>
+            <Checkbox
+              checked={disabled}
+              onChange={(e) => setDisabled(e.target.checked)}
+              className="mb-2"
+            >
+              disabled
+            </Checkbox>
+            <Checkbox
+              checked={showUploadList}
+              onChange={(e) => setShowUploadList(e.target.checked)}
+              className="mb-2"
+            >
+              showUploadList
+            </Checkbox>
+            <Checkbox
+              checked={drag}
+              onChange={(e) => setDrag(e.target.checked)}
+              className="mb-4"
+            >
+              drag (modo arrastrar archivos)
+            </Checkbox>
+
+            <div className="mb-2">
+              <label className="block mb-1">listType</label>
+              <Select
+                value={listType}
+                onChange={(value) => setListType(value)}
+                style={{ width: "100%" }}
+              >
+                <Option value="text">text</Option>
+                <Option value="picture">picture</Option>
+                <Option value="picture-card">picture-card</Option>
+              </Select>
+            </div>
+
+            <Input
+              value={inputId}
+              onChange={(e) => setInputId(e.target.value)}
+              addonBefore="id"
+              className="mb-2"
+            />
+
+            {antdVersion !== "v3" && (
+              <div>
+                <label className="block mb-1">Estado</label>
+                <Select
+                  value={status}
+                  onChange={setStatus}
+                  style={{ width: "100%" }}
+                  allowClear
+                >
+                  <Option value="">none</Option>
+                  <Option value="error">error</Option>
+                  <Option value="warning">warning</Option>
+                </Select>
+              </div>
+            )}
+          </Panel>
+        </Collapse>
       </div>
     </Modal>
   );

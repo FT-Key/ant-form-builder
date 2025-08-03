@@ -2,18 +2,34 @@ import { NextResponse } from "next/server";
 
 export const AI_CONFIG = {
   model: "deepseek/deepseek-v3-0324",
-  maxTokens: 1000,
+  maxTokens: 4096, // Aumentado para permitir respuestas largas
   temperature: 0.7,
   apiUrl: "https://router.huggingface.co/novita/v3/openai/chat/completions",
 };
 
-// Función para limpiar código quitando bloques ```jsx ... ```
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+// Limpia código eliminando bloques de markdown ```jsx ... ```
 function cleanCode(rawCode: string): string {
   return rawCode
     .replace(/```(?:jsx)?\s*([\s\S]*?)```/gi, (_, innerCode) =>
       innerCode.trim()
     )
     .trim();
+}
+
+// Verifica si el código tiene signos de estar truncado
+function isPossiblyTruncated(code: string): boolean {
+  // Heurística: termina con etiqueta sin cerrar o no contiene cierres comunes
+  return (
+    code.length >= AI_CONFIG.maxTokens - 50 || // Casi tocó el límite
+    /<\w[^>]*$/.test(code) || // termina con etiqueta abierta
+    (code.includes("<Form.Item") && !code.includes("</Form.Item>")) ||
+    (code.includes("<Form") && !code.includes("</Form>"))
+  );
 }
 
 export async function POST(req: Request) {
@@ -28,8 +44,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const version = body.version || "v5"; // default
-    const systemMessage = {
+    const version = body.version || "v5";
+    const systemMessage: ChatMessage = {
       role: "system",
       content:
         `You are a React code generator. ONLY return valid JSX code for forms using Ant Design version ${version}. ` +
@@ -37,12 +53,13 @@ export async function POST(req: Request) {
         "Do NOT include explanations, comments, or markdown. Return ONLY clean, valid JSX code.",
     };
 
-    let messages = [];
+    let messages: ChatMessage[] = [];
 
     if (Array.isArray(body.messages)) {
+      const rawMessages = body.messages as ChatMessage[];
       messages = [
         systemMessage,
-        ...body.messages.filter((m) => m.role && m.content),
+        ...rawMessages.filter((m) => m.role && m.content),
       ];
     } else if (
       typeof body.prompt === "string" &&
@@ -80,10 +97,22 @@ export async function POST(req: Request) {
 
     const data = await response.json();
     const rawCode = data.choices?.[0]?.message?.content ?? "";
-    const code = cleanCode(rawCode);
+    const cleaned = cleanCode(rawCode);
 
-    return NextResponse.json({ code });
+    if (isPossiblyTruncated(cleaned)) {
+      console.warn("⚠️ Respuesta posiblemente truncada o malformada");
+      return NextResponse.json(
+        {
+          error:
+            "La respuesta generada parece estar incompleta o malformada. Intenta pedir menos componentes.",
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ code: cleaned });
   } catch (error: any) {
+    console.error("❌ Error interno:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
