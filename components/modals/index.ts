@@ -1,3 +1,13 @@
 export { default as InputTextModal } from "./InputTextModal";
 export { default as InputPasswordModal } from "./InputPasswordModal";
 export { default as InputTextareaModal } from "./InputTextareaModal";
+export { default as SelectEditModal } from "./SelectEditModal";
+export { default as DatePickerEditModal } from "./DatePickerEditModal";
+export { default as InputNumberEditModal } from "./InputNumberEditModal";
+export { default as TimePickerEditModal } from "./TimePickerEditModal";
+export { default as RangePickerEditModal } from "./RangePickerEditModal";
+export { default as CheckboxEditModal } from "./CheckboxEditModal";
+export { default as CheckboxGroupEditModal } from "./CheckboxGroupEditModal";
+export { default as RadioGroupEditModal } from "./RadioGroupEditModal";
+export { default as SwitchEditModal } from "./SwitchEditModal";
+export { default as UploadEditModal } from "./UploadEditModal";

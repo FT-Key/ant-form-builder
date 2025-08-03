@@ -1,10 +1,11 @@
 "use client";
 
-import { Modal, Input, Checkbox, Select, Divider } from "antd";
+import { Modal, Input, Checkbox, Select, Divider, Collapse } from "antd";
 import { useEffect, useState } from "react";
 import { useAntdVersion } from "@/context/AntdVersionContext";
 
 const { Option } = Select;
+const { Panel } = Collapse;
 
 interface InputTextModalProps {
   open: boolean;
@@ -20,6 +21,7 @@ export default function InputTextModal({
   onSave,
 }: InputTextModalProps) {
   const { antdVersion } = useAntdVersion();
+
   const [label, setLabel] = useState("");
   const [name, setName] = useState("");
   const [placeholder, setPlaceholder] = useState("");
@@ -27,44 +29,56 @@ export default function InputTextModal({
   const [allowClear, setAllowClear] = useState(false);
   const [showCount, setShowCount] = useState(false);
   const [disabled, setDisabled] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
+  const [autoFocus, setAutoFocus] = useState(false);
   const [status, setStatus] = useState<"error" | "warning" | "">("");
   const [size, setSize] = useState<"large" | "middle" | "small">("middle");
+  const [addonBefore, setAddonBefore] = useState("");
+  const [addonAfter, setAddonAfter] = useState("");
+  const [prefix, setPrefix] = useState("");
+  const [suffix, setSuffix] = useState("");
+  const [inputId, setInputId] = useState("");
 
   useEffect(() => {
-    const labelMatch = codeBlock.match(/label="([^"]+)"/);
-    const nameMatch = codeBlock.match(/name="([^"]+)"/);
-    const placeholderMatch = codeBlock.match(/placeholder="([^"]+)"/);
-    const maxLengthMatch = codeBlock.match(/maxLength={(\d+)}/);
-    const allowClearMatch = /allowClear/.test(codeBlock);
-    const showCountMatch = /showCount/.test(codeBlock);
-    const disabledMatch = /disabled/.test(codeBlock);
-    const statusMatch = codeBlock.match(/status="(error|warning)"/);
-    const sizeMatch = codeBlock.match(/size="(large|middle|small)"/);
+    const matchAttr = (attr: string) => {
+      const match = codeBlock.match(new RegExp(`${attr}="([^"]+)"`));
+      return match?.[1] || "";
+    };
 
-    setLabel(labelMatch?.[1] || "");
-    setName(nameMatch?.[1] || "");
-    setPlaceholder(placeholderMatch?.[1] || "");
+    const matchBool = (attr: string) =>
+      new RegExp(`\\b${attr}\\b`).test(codeBlock);
+
+    const maxLengthMatch = codeBlock.match(/maxLength={(\d+)}/);
+    const sizeMatch = codeBlock.match(/size="(large|middle|small)"/);
+    const statusMatch = codeBlock.match(/status="(error|warning)"/);
+
+    setLabel(matchAttr("label"));
+    setName(matchAttr("name"));
+    setPlaceholder(matchAttr("placeholder"));
+    setAddonBefore(matchAttr("addonBefore"));
+    setAddonAfter(matchAttr("addonAfter"));
+    setPrefix(matchAttr("prefix"));
+    setSuffix(matchAttr("suffix"));
+    setInputId(matchAttr("id"));
     setMaxLength(maxLengthMatch ? parseInt(maxLengthMatch[1]) : undefined);
-    setAllowClear(allowClearMatch);
-    setShowCount(showCountMatch);
-    setDisabled(disabledMatch);
-    const statusValue = statusMatch?.[1];
-    if (statusValue === "error" || statusValue === "warning") {
-      setStatus(statusValue);
-    } else {
-      setStatus("");
-    }
+
+    setAllowClear(matchBool("allowClear"));
+    setShowCount(matchBool("showCount"));
+    setDisabled(matchBool("disabled"));
+    setReadOnly(matchBool("readOnly"));
+    setAutoFocus(matchBool("autoFocus"));
 
     const sizeValue = sizeMatch?.[1];
-    if (
-      sizeValue === "small" ||
-      sizeValue === "middle" ||
-      sizeValue === "large"
-    ) {
-      setSize(sizeValue);
-    } else {
-      setSize("middle");
-    }
+    setSize(
+      sizeValue === "small" || sizeValue === "middle" || sizeValue === "large"
+        ? sizeValue
+        : "middle"
+    );
+
+    const statusValue = statusMatch?.[1];
+    setStatus(
+      statusValue === "error" || statusValue === "warning" ? statusValue : ""
+    );
   }, [codeBlock]);
 
   const buildInputCode = () => {
@@ -73,10 +87,17 @@ export default function InputTextModal({
     if (placeholder) inputProps.push(`placeholder="${placeholder}"`);
     if (maxLength !== undefined) inputProps.push(`maxLength={${maxLength}}`);
     if (disabled) inputProps.push(`disabled`);
+    if (readOnly) inputProps.push(`readOnly`);
+    if (autoFocus) inputProps.push(`autoFocus`);
     if (antdVersion !== "v3" && allowClear) inputProps.push(`allowClear`);
     if (antdVersion !== "v3" && showCount) inputProps.push(`showCount`);
     if (antdVersion !== "v3" && status) inputProps.push(`status="${status}"`);
     if (size && size !== "middle") inputProps.push(`size="${size}"`);
+    if (addonBefore) inputProps.push(`addonBefore="${addonBefore}"`);
+    if (addonAfter) inputProps.push(`addonAfter="${addonAfter}"`);
+    if (prefix) inputProps.push(`prefix="${prefix}"`);
+    if (suffix) inputProps.push(`suffix="${suffix}"`);
+    if (inputId) inputProps.push(`id="${inputId}"`);
 
     return `<Form.Item label="${label}" name="${name}">
   <Input ${inputProps.join(" ")} />
@@ -93,44 +114,45 @@ export default function InputTextModal({
       cancelText="Cancelar"
     >
       <div className="space-y-4">
+        <Divider>Campos básicos</Divider>
         <Input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Etiqueta"
+          addonBefore="label"
         />
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nombre (name)"
+          addonBefore="name"
         />
         <Input
           value={placeholder}
           onChange={(e) => setPlaceholder(e.target.value)}
           placeholder="Placeholder"
+          addonBefore="placeholder"
         />
         <Input
           type="number"
           value={maxLength}
           onChange={(e) => setMaxLength(Number(e.target.value) || undefined)}
           placeholder="Max Length"
+          addonBefore="maxLength"
         />
 
-        <Divider>Opciones</Divider>
-
         <Checkbox
-          checked={allowClear}
-          disabled={antdVersion === "v3"}
-          onChange={(e) => setAllowClear(e.target.checked)}
+          checked={readOnly}
+          onChange={(e) => setReadOnly(e.target.checked)}
         >
-          allowClear
+          readOnly
         </Checkbox>
 
         <Checkbox
-          checked={showCount}
-          disabled={antdVersion === "v3"}
-          onChange={(e) => setShowCount(e.target.checked)}
+          checked={autoFocus}
+          onChange={(e) => setAutoFocus(e.target.checked)}
         >
-          showCount
+          autoFocus
         </Checkbox>
 
         <Checkbox
@@ -140,33 +162,87 @@ export default function InputTextModal({
           disabled
         </Checkbox>
 
-        <div>
-          <label className="block mb-1">Tamaño (size)</label>
-          <Select
-            value={size}
-            onChange={(value) => setSize(value)}
-            style={{ width: "100%" }}
-          >
-            <Option value="small">small</Option>
-            <Option value="middle">middle</Option>
-            <Option value="large">large</Option>
-          </Select>
-        </div>
+        <Collapse ghost>
+          <Panel header="Opciones avanzadas" key="1">
+            <Input
+              value={addonBefore}
+              onChange={(e) => setAddonBefore(e.target.value)}
+              placeholder="Valor de addonBefore"
+              addonBefore="addonBefore"
+              className="mb-2"
+            />
+            <Input
+              value={addonAfter}
+              onChange={(e) => setAddonAfter(e.target.value)}
+              placeholder="Valor de addonAfter"
+              addonBefore="addonAfter"
+              className="mb-2"
+            />
+            <Input
+              value={prefix}
+              onChange={(e) => setPrefix(e.target.value)}
+              placeholder="Prefijo"
+              addonBefore="prefix"
+              className="mb-2"
+            />
+            <Input
+              value={suffix}
+              onChange={(e) => setSuffix(e.target.value)}
+              placeholder="Sufijo"
+              addonBefore="suffix"
+              className="mb-2"
+            />
+            <Input
+              value={inputId}
+              onChange={(e) => setInputId(e.target.value)}
+              placeholder="ID del input"
+              addonBefore="id"
+              className="mb-2"
+            />
 
-        {antdVersion !== "v3" && (
-          <div>
-            <label className="block mb-1">Estado</label>
-            <Select
-              value={status}
-              onChange={(value) => setStatus(value)}
-              style={{ width: "100%" }}
+            <Checkbox
+              checked={allowClear}
+              disabled={antdVersion === "v3"}
+              onChange={(e) => setAllowClear(e.target.checked)}
+              className="mb-2"
             >
-              <Option value="">none</Option>
-              <Option value="error">error</Option>
-              <Option value="warning">warning</Option>
-            </Select>
-          </div>
-        )}
+              allowClear
+            </Checkbox>
+
+            <Checkbox
+              checked={showCount}
+              disabled={antdVersion === "v3"}
+              onChange={(e) => setShowCount(e.target.checked)}
+              className="mb-2"
+            >
+              showCount
+            </Checkbox>
+
+            <div className="mb-2">
+              <label className="block mb-1">Tamaño (size)</label>
+              <Select value={size} onChange={setSize} style={{ width: "100%" }}>
+                <Option value="small">small</Option>
+                <Option value="middle">middle</Option>
+                <Option value="large">large</Option>
+              </Select>
+            </div>
+
+            {antdVersion !== "v3" && (
+              <div>
+                <label className="block mb-1">Estado</label>
+                <Select
+                  value={status}
+                  onChange={setStatus}
+                  style={{ width: "100%" }}
+                >
+                  <Option value="">none</Option>
+                  <Option value="error">error</Option>
+                  <Option value="warning">warning</Option>
+                </Select>
+              </div>
+            )}
+          </Panel>
+        </Collapse>
       </div>
     </Modal>
   );

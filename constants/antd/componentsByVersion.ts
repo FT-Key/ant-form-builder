@@ -13,6 +13,10 @@ export const v3: FormComponent[] = [
     code: `<Form.Item label="Password" name="password"><Input.Password placeholder="Enter password" /></Form.Item>`,
   },
   {
+    label: "InputNumber",
+    code: `<Form.Item label="Number" name="number"><InputNumber placeholder="Enter a number" style={{ width: '100%' }} /></Form.Item>`,
+  },
+  {
     label: "Textarea",
     code: `<Form.Item label="Message" name="message"><Input.TextArea rows={4} placeholder="Enter your message" /></Form.Item>`,
   },
@@ -67,10 +71,6 @@ export const v3: FormComponent[] = [
   {
     label: "TreeSelect",
     code: `<Form.Item label="Tree" name="tree"><TreeSelect treeData={[{ title: 'Node1', value: '0-0', key: '0-0' }]} placeholder="Please select" /></Form.Item>`,
-  },
-  {
-    label: "InputNumber",
-    code: `<Form.Item label="Number" name="number"><InputNumber placeholder="Enter a number" style={{ width: '100%' }} /></Form.Item>`,
   },
   {
     label: "Mentions",

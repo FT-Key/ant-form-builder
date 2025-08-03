@@ -9,11 +9,21 @@ import {
 } from "@hello-pangea/dnd";
 import { EditOutlined } from "@ant-design/icons";
 
-// Importa los modales desde el index.ts centralizado
+// Importa todos los modales desde index.ts
 import {
   InputTextModal,
   InputPasswordModal,
+  InputNumberEditModal,
   InputTextareaModal,
+  SelectEditModal,
+  DatePickerEditModal,
+  TimePickerEditModal,
+  RangePickerEditModal,
+  CheckboxEditModal,
+  CheckboxGroupEditModal,
+  RadioGroupEditModal,
+  SwitchEditModal,
+  UploadEditModal,
 } from "./modals";
 
 interface InputItem {
@@ -36,12 +46,36 @@ export default function InputList({
 }: InputListProps) {
   const [editingInputId, setEditingInputId] = useState<string | null>(null);
 
-  // Función para detectar tipo de input por código (agrega más según necesites)
+  // Detecta el tipo de input según el código
   const getInputType = (
     codeBlock: string
-  ): "text" | "password" | "textarea" | "other" => {
+  ):
+    | "text"
+    | "password"
+    | "inputnumber"
+    | "textarea"
+    | "select"
+    | "datepicker"
+    | "timepicker"
+    | "rangepicker"
+    | "checkbox"
+    | "checkboxgroup"
+    | "radiogroup"
+    | "switch"
+    | "upload"
+    | "other" => {
     if (codeBlock.includes("<Input.Password")) return "password";
     if (codeBlock.includes("<Input.TextArea")) return "textarea";
+    if (codeBlock.includes("<InputNumber")) return "inputnumber";
+    if (codeBlock.includes("<Select")) return "select";
+    if (codeBlock.includes("<DatePicker.RangePicker")) return "rangepicker";
+    if (codeBlock.includes("<DatePicker ")) return "datepicker";
+    if (codeBlock.includes("<TimePicker")) return "timepicker";
+    if (codeBlock.includes("<Checkbox.Group")) return "checkboxgroup";
+    if (codeBlock.includes("<Checkbox")) return "checkbox";
+    if (codeBlock.includes("<Radio.Group")) return "radiogroup";
+    if (codeBlock.includes("<Switch")) return "switch";
+    if (codeBlock.includes("<Upload")) return "upload";
     if (codeBlock.includes("<Input")) return "text";
     return "other";
   };
@@ -67,7 +101,6 @@ export default function InputList({
     }
   };
 
-  // Código y tipo de input seleccionado
   const codeBlock = editingInputId ? getCodeBlockByInputId(editingInputId) : "";
   const inputType = editingInputId ? getInputType(codeBlock) : null;
 
@@ -113,7 +146,7 @@ export default function InputList({
         </Droppable>
       </DragDropContext>
 
-      {/* Modales según tipo de input */}
+      {/* Renderizado de modales según tipo */}
       {inputType === "text" && editingInputId && (
         <InputTextModal
           open={true}
@@ -132,8 +165,98 @@ export default function InputList({
         />
       )}
 
+      {inputType === "inputnumber" && editingInputId && (
+        <InputNumberEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
       {inputType === "textarea" && editingInputId && (
         <InputTextareaModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "select" && editingInputId && (
+        <SelectEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "datepicker" && editingInputId && (
+        <DatePickerEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "timepicker" && editingInputId && (
+        <TimePickerEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "rangepicker" && editingInputId && (
+        <RangePickerEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "checkbox" && editingInputId && (
+        <CheckboxEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "checkboxgroup" && editingInputId && (
+        <CheckboxGroupEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "radiogroup" && editingInputId && (
+        <RadioGroupEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "switch" && editingInputId && (
+        <SwitchEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "upload" && editingInputId && (
+        <UploadEditModal
           open={true}
           codeBlock={codeBlock}
           onCancel={() => setEditingInputId(null)}
