@@ -58,7 +58,7 @@ export const v3: FormComponent[] = [
   },
   {
     label: "Slider",
-    code: `<Form.Item label="Volume" name="volume"><Slider tooltipVisible /></Form.Item>`,
+    code: `<Form.Item label="Volume" name="volume"><Slider /></Form.Item>`,
   },
   {
     label: "Rate",

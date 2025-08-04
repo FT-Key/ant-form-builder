@@ -24,6 +24,10 @@ import {
   RadioGroupEditModal,
   SwitchEditModal,
   UploadEditModal,
+  SliderEditModal,
+  RateEditModal,
+  CascaderEditModal,
+  TreeSelectEditModal,
 } from "./modals";
 
 interface InputItem {
@@ -63,6 +67,10 @@ export default function InputList({
     | "radiogroup"
     | "switch"
     | "upload"
+    | "slider"
+    | "rate"
+    | "cascader"
+    | "treeselect"
     | "other" => {
     if (!codeBlock) return "other";
 
@@ -78,6 +86,10 @@ export default function InputList({
     if (codeBlock.includes("<Radio.Group")) return "radiogroup";
     if (codeBlock.includes("<Switch")) return "switch";
     if (codeBlock.includes("<Upload")) return "upload";
+    if (codeBlock.includes("<Slider")) return "slider";
+    if (codeBlock.includes("<Rate")) return "rate";
+    if (codeBlock.includes("<Cascader")) return "cascader";
+    if (codeBlock.includes("<TreeSelect")) return "treeselect";
     if (codeBlock.includes("<Input")) return "text";
 
     return "other";
@@ -260,6 +272,42 @@ export default function InputList({
 
       {inputType === "upload" && editingInputId && (
         <UploadEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "slider" && editingInputId && (
+        <SliderEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "rate" && editingInputId && (
+        <RateEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "cascader" && editingInputId && (
+        <CascaderEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "treeselect" && editingInputId && (
+        <TreeSelectEditModal
           open={true}
           codeBlock={codeBlock}
           onCancel={() => setEditingInputId(null)}

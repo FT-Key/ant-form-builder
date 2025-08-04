@@ -11,3 +11,7 @@ export { default as CheckboxGroupEditModal } from "./CheckboxGroupEditModal";
 export { default as RadioGroupEditModal } from "./RadioGroupEditModal";
 export { default as SwitchEditModal } from "./SwitchEditModal";
 export { default as UploadEditModal } from "./UploadEditModal";
+export { default as SliderEditModal } from "./SliderEditModal";
+export { default as RateEditModal } from "./RateEditModal";
+export { default as CascaderEditModal } from "./CascaderEditModal";
+export { default as TreeSelectEditModal } from "./TreeSelectEditModal";
