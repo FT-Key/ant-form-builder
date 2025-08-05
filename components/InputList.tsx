@@ -28,6 +28,9 @@ import {
   RateEditModal,
   CascaderEditModal,
   TreeSelectEditModal,
+  MentionsEditModal,
+  AutoCompleteEditModal,
+  TransferEditModal,
 } from "./modals";
 
 interface InputItem {
@@ -71,6 +74,9 @@ export default function InputList({
     | "rate"
     | "cascader"
     | "treeselect"
+    | "mentions"
+    | "autocomplete"
+    | "transfer"
     | "other" => {
     if (!codeBlock) return "other";
 
@@ -90,6 +96,9 @@ export default function InputList({
     if (codeBlock.includes("<Rate")) return "rate";
     if (codeBlock.includes("<Cascader")) return "cascader";
     if (codeBlock.includes("<TreeSelect")) return "treeselect";
+    if (codeBlock.includes("<Mentions")) return "mentions";
+    if (codeBlock.includes("<AutoComplete")) return "autocomplete";
+    if (codeBlock.includes("<Transfer")) return "transfer";
     if (codeBlock.includes("<Input")) return "text";
 
     return "other";
@@ -308,6 +317,33 @@ export default function InputList({
 
       {inputType === "treeselect" && editingInputId && (
         <TreeSelectEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "mentions" && editingInputId && (
+        <MentionsEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "autocomplete" && editingInputId && (
+        <AutoCompleteEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "transfer" && editingInputId && (
+        <TransferEditModal
           open={true}
           codeBlock={codeBlock}
           onCancel={() => setEditingInputId(null)}

@@ -13,6 +13,9 @@ import Headers from "../components/Headers";
 import { useAntdVersion } from "../context/AntdVersionContext";
 import { jsxParserComponentsByVersion } from "@/constants/antd/jsxParserComponentsByVersion";
 import { buildMessages, fetchGeneratedCode } from "../utils/generateCode";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import TransferExample from "@/components/TransferExample";
 
 export default function Home() {
   const { antdVersion, getBaseCode } = useAntdVersion();
@@ -34,15 +37,27 @@ export default function Home() {
 
   // --- Nuevo: manejo inputs para InputList ---
   // Parse simple inputs en base a <Form.Item> bloques
-  const parseInputsFromCode = useCallback((codeStr: string) => {
-    const regex = /<Form\.Item[^>]*>([\s\S]*?)<\/Form\.Item>/g;
-    const matches = [];
-    let match;
-    while ((match = regex.exec(codeStr))) {
-      matches.push(match[0]);
+  function parseInputsFromCode(codeStr: string): string[] {
+    const blocks: string[] = [];
+
+    // 1. Agrupar el bloque especial de Transfer
+    const transferRegex =
+      /<Form\.Item[^>]*label="[^"]*Transfer"[^>]*>[\s\S]*?<\/Form\.Item>\s*<Form\.Item[^>]*name="[^"]+"[^>]*hidden>[\s\S]*?<\/Form\.Item>/g;
+    const transferMatches = codeStr.match(transferRegex);
+    if (transferMatches) {
+      blocks.push(...transferMatches);
+      codeStr = codeStr.replace(transferRegex, ""); // eliminar los ya procesados
     }
-    return matches;
-  }, []);
+
+    // 2. Agarrar el resto de bloques Form.Item
+    const genericRegex = /<Form\.Item[\s\S]*?<\/Form\.Item>/g;
+    const genericMatches = codeStr.match(genericRegex);
+    if (genericMatches) {
+      blocks.push(...genericMatches);
+    }
+
+    return blocks;
+  }
 
   const inputsBlocks = parseInputsFromCode(code);
 
@@ -223,6 +238,8 @@ export default function Home() {
     <div className="min-h-screen bg-white relative">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080801a_1px,transparent_1px),linear-gradient(to_bottom,#8080801a_1px,transparent_1px)] bg-[size:24px_24px]"></div>
 
+      <Navbar />
+
       <div className="relative z-10">
         {/* Header */}
         <Headers />
@@ -316,6 +333,8 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   );
 }

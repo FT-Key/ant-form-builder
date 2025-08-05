@@ -1,4 +1,3 @@
-// components/ErrorBoundary.tsx
 "use client";
 
 import React from "react";
@@ -25,14 +24,26 @@ export default class ErrorBoundary extends React.Component<Props, State> {
     this.props.onError?.(error, info);
   }
 
+  handleReset = () => {
+    // Borra los logs guardados y resetea el estado
+    localStorage.removeItem("renderErrors");
+    this.setState({ hasError: false, error: null });
+  };
+
   render() {
     if (this.state.hasError) {
       return (
         <div className="bg-red-50 text-red-700 border border-red-200 p-4 rounded">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-lg font-semibold mb-1">
             ⚠ Error al renderizar el formulario
           </h2>
-          <p>{this.state.error?.message}</p>
+          <p className="mb-3">{this.state.error?.message}</p>
+          <button
+            className="text-sm text-blue-600 hover:underline"
+            onClick={this.handleReset}
+          >
+            Limpiar errores e intentar nuevamente
+          </button>
         </div>
       );
     }

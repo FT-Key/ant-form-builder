@@ -15,3 +15,6 @@ export { default as SliderEditModal } from "./SliderEditModal";
 export { default as RateEditModal } from "./RateEditModal";
 export { default as CascaderEditModal } from "./CascaderEditModal";
 export { default as TreeSelectEditModal } from "./TreeSelectEditModal";
+export { default as MentionsEditModal } from "./MentionsEditModal";
+export { default as AutoCompleteEditModal } from "./AutoCompleteEditModal";
+export { default as TransferEditModal } from "./TransferEditModal";

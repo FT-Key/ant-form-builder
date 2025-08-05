@@ -1,8 +1,10 @@
 // components/SidebarBuilder.tsx
 "use client";
+import { useState, useMemo } from "react";
 import { useAntdVersion } from "../context/AntdVersionContext";
 import { componentsByVersion } from "@/constants/antd/componentsByVersion";
 import AntdVersionSelector from "./AntdVersionSelector";
+import { Input } from "antd";
 
 export default function SidebarBuilder({
   onInsert,
@@ -12,22 +14,36 @@ export default function SidebarBuilder({
   setEditingMode: (mode: "builder" | "code") => void;
 }) {
   const { antdVersion } = useAntdVersion();
+  const [search, setSearch] = useState("");
 
   const buttons = componentsByVersion[antdVersion] || [];
 
+  const filteredButtons = useMemo(() => {
+    const lower = search.toLowerCase();
+    return buttons.filter(({ label }) => label.toLowerCase().includes(lower));
+  }, [search, buttons]);
+
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm h-fit">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm h-[90vh] flex flex-col">
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-gray-900 rounded-full"></div>
           <h3 className="text-gray-900 text-lg font-medium">Components</h3>
         </div>
       </div>
-      <div className="p-4">
+      <div className="p-4 border-b border-gray-100">
         <AntdVersionSelector />
+        <div className="mt-3">
+          <Input
+            allowClear
+            placeholder="Search components"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
-      <div className="p-4 space-y-2">
-        {buttons.map(({ label, code }) => (
+      <div className="p-4 space-y-2 overflow-y-auto flex-1">
+        {filteredButtons.map(({ label, code }) => (
           <button
             key={label}
             onClick={() => onInsert("\n" + code, label)}
@@ -37,6 +53,11 @@ export default function SidebarBuilder({
             {label}
           </button>
         ))}
+        {filteredButtons.length === 0 && (
+          <div className="text-gray-400 text-sm text-center">
+            No components found
+          </div>
+        )}
       </div>
     </div>
   );

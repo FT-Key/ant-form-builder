@@ -28,15 +28,27 @@ export function useFormBuilderLogic(
   const components = jsxParserComponentsByVersion[antdVersion];
 
   // --- Nuevo: manejo inputs para InputList ---
-  const parseInputsFromCode = useCallback((codeStr: string) => {
-    const regex = /<Form\.Item[^>]*>([\s\S]*?)<\/Form\.Item>/g;
-    const matches = [];
-    let match;
-    while ((match = regex.exec(codeStr))) {
-      matches.push(match[0]);
+  function parseInputsFromCode(codeStr: string): string[] {
+    const blocks: string[] = [];
+
+    // 1. Agrupar el bloque especial de Transfer
+    const transferRegex =
+      /<Form\.Item[^>]*label="[^"]*Transfer"[^>]*>[\s\S]*?<\/Form\.Item>\s*<Form\.Item[^>]*name="[^"]+"[^>]*hidden>[\s\S]*?<\/Form\.Item>/g;
+    const transferMatches = codeStr.match(transferRegex);
+    if (transferMatches) {
+      blocks.push(...transferMatches);
+      codeStr = codeStr.replace(transferRegex, ""); // eliminar los ya procesados
     }
-    return matches;
-  }, []);
+
+    // 2. Agarrar el resto de bloques Form.Item
+    const genericRegex = /<Form\.Item[\s\S]*?<\/Form\.Item>/g;
+    const genericMatches = codeStr.match(genericRegex);
+    if (genericMatches) {
+      blocks.push(...genericMatches);
+    }
+
+    return blocks;
+  }
 
   const inputsBlocks = parseInputsFromCode(localCode);
 
