@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { v4 as uuidv4 } from "uuid";
 import SidebarBuilder from "../components/SidebarBuilder";
 import PreviewArea from "../components/PreviewArea";
 import CodeEditor from "../components/CodeEditor";
@@ -15,12 +16,14 @@ import { jsxParserComponentsByVersion } from "@/constants/antd/jsxParserComponen
 import { buildMessages, fetchGeneratedCode } from "../utils/generateCode";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import TransferExample from "@/components/TransferExample";
 
 export default function Home() {
   const { antdVersion, getBaseCode } = useAntdVersion();
   const components = jsxParserComponentsByVersion[antdVersion];
   const previewRef = useRef<HTMLDivElement>(null);
+
+  // Mantener mapa bloque -> id persistente
+  const blocksToId = useRef(new Map<string, string>());
 
   // Estados generales
   const [isStylesLoaded, setIsStylesLoaded] = useState(false);
@@ -34,55 +37,127 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showVersionWarning, setShowVersionWarning] = useState(false);
   const [prevAntdVersion, setPrevAntdVersion] = useState<string | null>(null);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
 
   // --- Nuevo: manejo inputs para InputList ---
-  // Parse simple inputs en base a <Form.Item> bloques
-  function parseInputsFromCode(codeStr: string): string[] {
-    const blocks: string[] = [];
+  function parseInputsFromCodeInOrder(codeStr: string): string[] {
+    const regexes = [
+      // Transfer especial (dos bloques juntos, queremos que se extraigan como uno)
+      /<Form\.Item[^>]*label="[^"]*Transfer"[^>]*>[\s\S]*?<\/Form\.Item>\s*<Form\.Item[^>]*name="[^"]+"[^>]*hidden>[\s\S]*?<\/Form\.Item>/g,
+      // Form.Item estándar
+      /<Form\.Item[\s\S]*?<\/Form\.Item>/g,
+      // Otros bloques standalone
+      /<Steps[\s\S]*?<\/Steps>/g,
+      /<Descriptions[\s\S]*?<\/Descriptions>/g,
+      /<Divider[^>]*\/?>/g,
+    ];
 
-    // 1. Agrupar el bloque especial de Transfer
-    const transferRegex =
-      /<Form\.Item[^>]*label="[^"]*Transfer"[^>]*>[\s\S]*?<\/Form\.Item>\s*<Form\.Item[^>]*name="[^"]+"[^>]*hidden>[\s\S]*?<\/Form\.Item>/g;
-    const transferMatches = codeStr.match(transferRegex);
-    if (transferMatches) {
-      blocks.push(...transferMatches);
-      codeStr = codeStr.replace(transferRegex, ""); // eliminar los ya procesados
+    // Encontrar todas las coincidencias de todos los regexes, con su posición
+    type MatchWithIndex = { index: number; text: string };
+
+    let allMatches: MatchWithIndex[] = [];
+
+    for (const regex of regexes) {
+      let match;
+      while ((match = regex.exec(codeStr)) !== null) {
+        allMatches.push({ index: match.index, text: match[0] });
+      }
     }
 
-    // 2. Agarrar el resto de bloques Form.Item
-    const genericRegex = /<Form\.Item[\s\S]*?<\/Form\.Item>/g;
-    const genericMatches = codeStr.match(genericRegex);
-    if (genericMatches) {
-      blocks.push(...genericMatches);
+    // Ordenar todas las coincidencias por la posición en el string para respetar orden original
+    allMatches.sort((a, b) => a.index - b.index);
+
+    // Aquí tenemos todos los bloques en orden, pero pueden haber duplicados si se solapan (por Transfer que contiene Form.Item)
+    // Para evitar solapamientos: vamos a ir agregando bloques que no solapen con los anteriores
+
+    const finalBlocks: string[] = [];
+    let lastEnd = -1;
+    for (const match of allMatches) {
+      const start = match.index;
+      const end = start + match.text.length;
+
+      if (start >= lastEnd) {
+        finalBlocks.push(match.text);
+        lastEnd = end;
+      }
+      // Si el bloque se solapa con uno previo, lo ignoramos para no duplicar
     }
 
-    return blocks;
+    return finalBlocks;
   }
 
-  const inputsBlocks = parseInputsFromCode(code);
+  const inputsBlocks = useMemo(() => parseInputsFromCodeInOrder(code), [code]);
 
-  const inputs = inputsBlocks.map((block, i) => ({
-    id: `input-${i}`,
-    label: block.match(/name="([^"]+)"/)?.[1] || `Input ${i + 1}`,
-  }));
+  const inputs = useMemo(() => {
+    // Limpiar del mapa bloques que ya no existen
+    blocksToId.current.forEach((_, key) => {
+      if (!inputsBlocks.includes(key)) {
+        blocksToId.current.delete(key);
+      }
+    });
+
+    // Asignar ID nuevo a bloques nuevos
+    inputsBlocks.forEach((block) => {
+      if (!blocksToId.current.has(block)) {
+        blocksToId.current.set(block, uuidv4());
+      }
+    });
+
+    return inputsBlocks.map((block) => {
+      const id = blocksToId.current.get(block)!;
+      const nameMatch = block.match(/name="([^"]+)"/)?.[1];
+      const labelMatch = block.match(/label="([^"]+)"/)?.[1];
+      let label = nameMatch || labelMatch;
+
+      if (!label) {
+        if (block.includes("<Steps")) label = "Steps";
+        else if (block.includes("<Descriptions")) label = "Descriptions";
+        else if (block.includes("<Divider")) label = "Divider";
+        else label = `Bloque`;
+      }
+
+      return { id, label };
+    });
+  }, [inputsBlocks]);
 
   const reorderCodeByInputIds = useCallback(
     (newOrder: string[]) => {
-      const idToBlock: Record<string, string> = {};
-      inputs.forEach(({ id }, idx) => {
-        idToBlock[id] = inputsBlocks[idx];
+      const idToBlock = new Map<string, string>();
+      inputsBlocks.forEach((block) => {
+        const id = blocksToId.current.get(block);
+        if (id) idToBlock.set(id, block);
       });
 
       const reorderedBlocks = newOrder
-        .map((id) => idToBlock[id])
-        .filter(Boolean);
+        .map((id) => idToBlock.get(id))
+        .filter(Boolean) as string[];
 
       const newCode = reorderedBlocks.join("\n");
-
       setCode(newCode);
       setHasUnsavedChanges(true);
     },
-    [inputs, inputsBlocks]
+    [inputsBlocks]
+  );
+
+  const handleUpdateInput = useCallback(
+    (inputId: string, newCodeBlock: string) => {
+      // Actualizar el bloque modificado y el mapa
+      const updatedBlocks = inputsBlocks.map((block) => {
+        const id = blocksToId.current.get(block);
+        if (id === inputId) {
+          // Eliminar la clave vieja (bloque antiguo)
+          blocksToId.current.delete(block);
+          // Asignar nuevo bloque al mismo ID
+          blocksToId.current.set(newCodeBlock, inputId);
+          return newCodeBlock;
+        }
+        return block;
+      });
+
+      setCode(updatedBlocks.join("\n"));
+      setHasUnsavedChanges(true);
+    },
+    [inputsBlocks]
   );
 
   // Load styles
@@ -120,21 +195,14 @@ export default function Home() {
     setPrevAntdVersion(antdVersion);
   }, [antdVersion]);
 
-  const handleUpdateInput = useCallback(
-    (inputId: string, newCodeBlock: string) => {
-      const updatedBlocks = inputsBlocks.map((block, index) => {
-        const id = inputs[index].id;
-        return id === inputId ? newCodeBlock : block;
-      });
+  useEffect(() => {
+    if (isPreviewExpanded) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [isPreviewExpanded]);
 
-      const updatedCode = updatedBlocks.join("\n");
-      setCode(updatedCode);
-      setHasUnsavedChanges(true);
-    },
-    [inputs, inputsBlocks]
-  );
-
-  // Handlers versiones y código
   const handleVersionChange = (id: number) => {
     const version = versions.find((v) => v.id === id);
     if (version) {
@@ -240,7 +308,7 @@ export default function Home() {
 
       <Navbar />
 
-      <div className="relative z-10">
+      <div className={`relative ${isPreviewExpanded ? "z-[100]" : "z-10"}`}>
         {/* Header */}
         <Headers />
 
@@ -302,6 +370,8 @@ export default function Home() {
                   code={code}
                   components={components}
                   previewRef={previewRef}
+                  isExpanded={isPreviewExpanded}
+                  setIsExpanded={setIsPreviewExpanded}
                 />
               )}
 
@@ -310,6 +380,8 @@ export default function Home() {
                 onSave={handleSave}
                 onCancel={handleCancel}
                 onClear={handleClear}
+                isPreviewExpanded={isPreviewExpanded}
+                setIsPreviewExpanded={setIsPreviewExpanded}
               />
 
               {showVersionWarning && (

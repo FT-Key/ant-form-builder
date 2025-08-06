@@ -31,6 +31,8 @@ import {
   MentionsEditModal,
   AutoCompleteEditModal,
   TransferEditModal,
+  StepsEditModal,
+  ColorPickerEditModal,
 } from "./modals";
 
 interface InputItem {
@@ -77,6 +79,8 @@ export default function InputList({
     | "mentions"
     | "autocomplete"
     | "transfer"
+    | "steps"
+    | "colorpicker"
     | "other" => {
     if (!codeBlock) return "other";
 
@@ -99,6 +103,8 @@ export default function InputList({
     if (codeBlock.includes("<Mentions")) return "mentions";
     if (codeBlock.includes("<AutoComplete")) return "autocomplete";
     if (codeBlock.includes("<Transfer")) return "transfer";
+    if (codeBlock.includes("<Steps")) return "steps";
+    if (codeBlock.includes("<ColorPicker ")) return "colorpicker";
     if (codeBlock.includes("<Input")) return "text";
 
     return "other";
@@ -344,6 +350,24 @@ export default function InputList({
 
       {inputType === "transfer" && editingInputId && (
         <TransferEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "steps" && editingInputId && (
+        <StepsEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "colorpicker" && editingInputId && (
+        <ColorPickerEditModal
           open={true}
           codeBlock={codeBlock}
           onCancel={() => setEditingInputId(null)}

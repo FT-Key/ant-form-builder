@@ -1,17 +1,26 @@
 "use client";
+
 import { Button, Alert } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  ArrowsAltOutlined,
+  ShrinkOutlined,
+} from "@ant-design/icons";
 
 export default function EditActions({
   hasUnsavedChanges,
   onSave,
   onCancel,
   onClear,
+  isPreviewExpanded,
+  setIsPreviewExpanded,
 }: {
   hasUnsavedChanges: boolean;
   onSave: () => void;
   onCancel: () => void;
   onClear: () => void;
+  isPreviewExpanded: boolean;
+  setIsPreviewExpanded: (value: boolean) => void;
 }) {
   return (
     <div className="mt-4">
@@ -35,9 +44,17 @@ export default function EditActions({
           </Button>
         </div>
 
-        <Button danger icon={<DeleteOutlined />} onClick={onClear}>
-          Clear Code
-        </Button>
+        <div className="flex gap-2">
+          <Button danger icon={<DeleteOutlined />} onClick={onClear} />
+
+          <Button
+            type="default"
+            icon={
+              isPreviewExpanded ? <ShrinkOutlined /> : <ArrowsAltOutlined />
+            }
+            onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
+          />
+        </div>
       </div>
 
       {hasUnsavedChanges && (

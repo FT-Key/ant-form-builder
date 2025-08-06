@@ -1,10 +1,10 @@
-// components/PreviewArea.tsx
 "use client";
 
-import { Form } from "antd";
+import { Form, Button } from "antd";
 import ReactJsxParser from "react-jsx-parser";
 import ErrorBoundary from "./ErrorBoundary";
 import { useState } from "react";
+import { ShrinkOutlined } from "@ant-design/icons";
 
 interface ErrorLog {
   message: string;
@@ -16,16 +16,18 @@ export default function PreviewArea({
   code,
   components,
   previewRef,
+  isExpanded,
+  setIsExpanded,
 }: {
   code: string;
   components: any;
   previewRef: any;
+  isExpanded: boolean;
+  setIsExpanded: (value: boolean) => void;
 }) {
   const [logs, setLogs] = useState<ErrorLog[]>(() => {
     try {
-      return JSON.parse(
-        localStorage.getItem("renderErrors") || "[]"
-      ) as ErrorLog[];
+      return JSON.parse(localStorage.getItem("renderErrors") || "[]");
     } catch {
       return [];
     }
@@ -41,18 +43,32 @@ export default function PreviewArea({
     const existingLogs = JSON.parse(
       localStorage.getItem("renderErrors") || "[]"
     );
-    const updatedLogs = [...existingLogs, newError].slice(-10); // guarda hasta 10 errores
+    const updatedLogs = [...existingLogs, newError].slice(-10);
     localStorage.setItem("renderErrors", JSON.stringify(updatedLogs));
     setLogs(updatedLogs);
   };
 
+  const wrapperClass = isExpanded
+    ? "fixed inset-0 bg-white p-8 overflow-auto z-[100]"
+    : "form-capture-area lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm min-h-96 relative";
+
   return (
     <div
-      className="form-capture-area lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm min-h-96 relative"
       ref={previewRef}
+      className={wrapperClass}
       style={{ fontFamily: "'Roboto', 'Helvetica Neue', 'Arial', sans-serif" }}
     >
-      <div className="p-8">
+      {isExpanded && (
+        <div className="absolute top-4 right-4 z-[110]">
+          <Button
+            type="default"
+            onClick={() => setIsExpanded(false)}
+            icon={<ShrinkOutlined />}
+          />
+        </div>
+      )}
+
+      <div className={isExpanded ? "" : "p-8"}>
         {code.trim() ? (
           <div className="bg-gray-50 rounded-lg p-8 border border-gray-100">
             <ErrorBoundary onError={handleError}>
@@ -80,7 +96,6 @@ export default function PreviewArea({
           </div>
         )}
 
-        {/* 👇 SOLO PARA DESARROLLO: visor de errores guardados */}
         {logs.length > 0 && (
           <div className="mt-6">
             <h3 className="text-sm font-medium text-red-500 mb-2">

@@ -125,7 +125,7 @@ export const v4: FormComponent[] = [
   },
   {
     label: "Input Group",
-    code: `<Form.Item label="Group" name="group"><Space.Compact style={{ display: 'flex' }}><Input placeholder="First" style={{ width: '50%' }} /><Input placeholder="Second" style={{ width: '50%' }} /></Space.Compact></Form.Item>`,
+    code: `<Form.Item label="Group" name="group">\n\t<Space.Compact style={{ display: 'flex' }}>\n\t\t<Input placeholder="First" style={{ width: '50%' }} />\n\t\t<Input placeholder="Second" style={{ width: '50%' }} />\n\t</Space.Compact>\n</Form.Item>`,
   },
   {
     label: "Descriptions",

@@ -18,3 +18,5 @@ export { default as TreeSelectEditModal } from "./TreeSelectEditModal";
 export { default as MentionsEditModal } from "./MentionsEditModal";
 export { default as AutoCompleteEditModal } from "./AutoCompleteEditModal";
 export { default as TransferEditModal } from "./TransferEditModal";
+export { default as StepsEditModal } from "./StepsEditModal";
+export { default as ColorPickerEditModal } from "./ColorPickerEditModal";
