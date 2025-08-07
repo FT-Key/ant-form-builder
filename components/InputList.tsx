@@ -33,6 +33,10 @@ import {
   TransferEditModal,
   StepsEditModal,
   ColorPickerEditModal,
+  SearchEditModal,
+  SubmitEditModal,
+  TourEditModal,
+  SegmentedEditModal,
 } from "./modals";
 
 interface InputItem {
@@ -79,8 +83,12 @@ export default function InputList({
     | "mentions"
     | "autocomplete"
     | "transfer"
+    | "search"
+    | "submit"
     | "steps"
     | "colorpicker"
+    | "tour"
+    | "segmented"
     | "other" => {
     if (!codeBlock) return "other";
 
@@ -103,8 +111,12 @@ export default function InputList({
     if (codeBlock.includes("<Mentions")) return "mentions";
     if (codeBlock.includes("<AutoComplete")) return "autocomplete";
     if (codeBlock.includes("<Transfer")) return "transfer";
+    if (codeBlock.includes("<Input.Search")) return "search";
+    if (codeBlock.includes("<Button")) return "submit";
     if (codeBlock.includes("<Steps")) return "steps";
-    if (codeBlock.includes("<ColorPicker ")) return "colorpicker";
+    if (codeBlock.includes("<ColorPicker")) return "colorpicker";
+    if (codeBlock.includes("<Tour")) return "tour";
+    if (codeBlock.includes("<Segmented")) return "segmented";
     if (codeBlock.includes("<Input")) return "text";
 
     return "other";
@@ -357,6 +369,24 @@ export default function InputList({
         />
       )}
 
+      {inputType === "search" && editingInputId && (
+        <SearchEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "submit" && editingInputId && (
+        <SubmitEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
       {inputType === "steps" && editingInputId && (
         <StepsEditModal
           open={true}
@@ -368,6 +398,24 @@ export default function InputList({
 
       {inputType === "colorpicker" && editingInputId && (
         <ColorPickerEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "tour" && editingInputId && (
+        <TourEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "segmented" && editingInputId && (
+        <SegmentedEditModal
           open={true}
           codeBlock={codeBlock}
           onCancel={() => setEditingInputId(null)}

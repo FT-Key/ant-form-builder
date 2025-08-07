@@ -40,50 +40,43 @@ export default function Home() {
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
 
   // --- Nuevo: manejo inputs para InputList ---
-  function parseInputsFromCodeInOrder(codeStr: string): string[] {
-    const regexes = [
-      // Transfer especial (dos bloques juntos, queremos que se extraigan como uno)
-      /<Form\.Item[^>]*label="[^"]*Transfer"[^>]*>[\s\S]*?<\/Form\.Item>\s*<Form\.Item[^>]*name="[^"]+"[^>]*hidden>[\s\S]*?<\/Form\.Item>/g,
-      // Form.Item estándar
-      /<Form\.Item[\s\S]*?<\/Form\.Item>/g,
-      // Otros bloques standalone
-      /<Steps[\s\S]*?<\/Steps>/g,
-      /<Descriptions[\s\S]*?<\/Descriptions>/g,
-      /<Divider[^>]*\/?>/g,
+  function parseInputsFromCodeInOrder(code: string) {
+    const inputRegex = /<Form\.Item[\s\S]*?<\/Form\.Item>/g;
+    const stepsRegex = /<Steps[\s\S]*?<\/Steps>/g;
+    const descriptionsRegex = /<Descriptions[\s\S]*?<\/Descriptions>/g;
+    const dividerRegex = /<Divider\s?\/?>/g;
+
+    // Componentes externos (no van dentro de Form.Item)
+    const externalComponentsRegexes: RegExp[] = [
+      /<Tour[\s\S]*?<\/Tour>/g,
+      /<FloatButton[\s\S]*?\/>/g,
+      /<Watermark[\s\S]*?<\/Watermark>/g,
+      /<QRCode[\s\S]*?\/>/g,
+      /<Image\.PreviewGroup[\s\S]*?<\/Image\.PreviewGroup>/g,
     ];
 
-    // Encontrar todas las coincidencias de todos los regexes, con su posición
-    type MatchWithIndex = { index: number; text: string };
+    // Obtener coincidencias
+    const matches = [
+      ...(code.match(inputRegex) || []),
+      ...(code.match(stepsRegex) || []),
+      ...(code.match(descriptionsRegex) || []),
+      ...(code.match(dividerRegex) || []),
+      ...externalComponentsRegexes.flatMap((regex) => {
+        const found = code.match(regex);
+        return found ? found : [];
+      }),
+    ];
 
-    let allMatches: MatchWithIndex[] = [];
+    // Ordenar por posición original en el string
+    const sorted = matches
+      .map((match) => ({
+        match,
+        index: code.indexOf(match),
+      }))
+      .sort((a, b) => a.index - b.index)
+      .map(({ match }) => match);
 
-    for (const regex of regexes) {
-      let match;
-      while ((match = regex.exec(codeStr)) !== null) {
-        allMatches.push({ index: match.index, text: match[0] });
-      }
-    }
-
-    // Ordenar todas las coincidencias por la posición en el string para respetar orden original
-    allMatches.sort((a, b) => a.index - b.index);
-
-    // Aquí tenemos todos los bloques en orden, pero pueden haber duplicados si se solapan (por Transfer que contiene Form.Item)
-    // Para evitar solapamientos: vamos a ir agregando bloques que no solapen con los anteriores
-
-    const finalBlocks: string[] = [];
-    let lastEnd = -1;
-    for (const match of allMatches) {
-      const start = match.index;
-      const end = start + match.text.length;
-
-      if (start >= lastEnd) {
-        finalBlocks.push(match.text);
-        lastEnd = end;
-      }
-      // Si el bloque se solapa con uno previo, lo ignoramos para no duplicar
-    }
-
-    return finalBlocks;
+    return sorted;
   }
 
   const inputsBlocks = useMemo(() => parseInputsFromCodeInOrder(code), [code]);
