@@ -24,3 +24,5 @@ export { default as StepsEditModal } from "./StepsEditModal";
 export { default as TourEditModal } from "./TourEditModal";
 export { default as SegmentedEditModal } from "./SegmentedEditModal";
 export { default as ColorPickerEditModal } from "./ColorPickerEditModal";
+export { default as FloatButtonEditModal } from "./FloatButtonEditModal";
+export { default as WatermarkEditModal } from "./WatermarkEditModal";

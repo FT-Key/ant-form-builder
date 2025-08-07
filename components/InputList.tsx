@@ -37,6 +37,8 @@ import {
   SubmitEditModal,
   TourEditModal,
   SegmentedEditModal,
+  FloatButtonEditModal,
+  WatermarkEditModal,
 } from "./modals";
 
 interface InputItem {
@@ -89,6 +91,8 @@ export default function InputList({
     | "colorpicker"
     | "tour"
     | "segmented"
+    | "floatbutton"
+    | "watermark"
     | "other" => {
     if (!codeBlock) return "other";
 
@@ -117,6 +121,8 @@ export default function InputList({
     if (codeBlock.includes("<ColorPicker")) return "colorpicker";
     if (codeBlock.includes("<Tour")) return "tour";
     if (codeBlock.includes("<Segmented")) return "segmented";
+    if (codeBlock.includes("<FloatButton")) return "floatbutton";
+    if (codeBlock.includes("<Watermark")) return "watermark";
     if (codeBlock.includes("<Input")) return "text";
 
     return "other";
@@ -416,6 +422,24 @@ export default function InputList({
 
       {inputType === "segmented" && editingInputId && (
         <SegmentedEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "floatbutton" && editingInputId && (
+        <FloatButtonEditModal
+          open={true}
+          codeBlock={codeBlock}
+          onCancel={() => setEditingInputId(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {inputType === "watermark" && editingInputId && (
+        <WatermarkEditModal
           open={true}
           codeBlock={codeBlock}
           onCancel={() => setEditingInputId(null)}
