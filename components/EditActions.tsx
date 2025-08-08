@@ -14,6 +14,7 @@ export default function EditActions({
   onClear,
   isPreviewExpanded,
   setIsPreviewExpanded,
+  isPreviewVisible, // 👈 NUEVO
 }: {
   hasUnsavedChanges: boolean;
   onSave: () => void;
@@ -21,6 +22,7 @@ export default function EditActions({
   onClear: () => void;
   isPreviewExpanded: boolean;
   setIsPreviewExpanded: (value: boolean) => void;
+  isPreviewVisible: boolean; // 👈 NUEVO
 }) {
   return (
     <div className="mt-4">
@@ -47,13 +49,15 @@ export default function EditActions({
         <div className="flex gap-2">
           <Button danger icon={<DeleteOutlined />} onClick={onClear} />
 
-          <Button
-            type="default"
-            icon={
-              isPreviewExpanded ? <ShrinkOutlined /> : <ArrowsAltOutlined />
-            }
-            onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
-          />
+          {isPreviewVisible && ( // 👈 SOLO si está visible el preview
+            <Button
+              type="default"
+              icon={
+                isPreviewExpanded ? <ShrinkOutlined /> : <ArrowsAltOutlined />
+              }
+              onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
+            />
+          )}
         </div>
       </div>
 

@@ -24,7 +24,7 @@ export default function SidebarBuilder({
   }, [search, buttons]);
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm h-[90vh] flex flex-col">
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm min-h-[500px] max-h-screen flex flex-col">
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-gray-900 rounded-full"></div>

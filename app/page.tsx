@@ -46,7 +46,6 @@ export default function Home() {
     const descriptionsRegex = /<Descriptions[\s\S]*?<\/Descriptions>/g;
     const dividerRegex = /<Divider\s?\/?>/g;
 
-    // Componentes externos (no van dentro de Form.Item)
     const externalComponentsRegexes: RegExp[] = [
       /<Tour[\s\S]*?<\/Tour>/g,
       /<FloatButton[\s\S]*?\/>/g,
@@ -55,7 +54,6 @@ export default function Home() {
       /<Image\.PreviewGroup[\s\S]*?<\/Image\.PreviewGroup>/g,
     ];
 
-    // Obtener coincidencias
     const matches = [
       ...(code.match(inputRegex) || []),
       ...(code.match(stepsRegex) || []),
@@ -67,7 +65,6 @@ export default function Home() {
       }),
     ];
 
-    // Ordenar por posición original en el string
     const sorted = matches
       .map((match) => ({
         match,
@@ -82,34 +79,55 @@ export default function Home() {
   const inputsBlocks = useMemo(() => parseInputsFromCodeInOrder(code), [code]);
 
   const inputs = useMemo(() => {
-    // Limpiar del mapa bloques que ya no existen
+    // Limpiar bloques no existentes
     blocksToId.current.forEach((_, key) => {
       if (!inputsBlocks.includes(key)) {
         blocksToId.current.delete(key);
       }
     });
 
-    // Asignar ID nuevo a bloques nuevos
+    // Asignar IDs a bloques nuevos
     inputsBlocks.forEach((block) => {
       if (!blocksToId.current.has(block)) {
         blocksToId.current.set(block, uuidv4());
       }
     });
 
+    // Función para obtener el nombre del componente raíz
+    const getRootComponentName = (block: string) => {
+      const match = block.match(/^<([A-Za-z0-9_.]+)/);
+      return match ? match[1] : null;
+    };
+
     return inputsBlocks.map((block) => {
       const id = blocksToId.current.get(block)!;
-      const nameMatch = block.match(/name="([^"]+)"/)?.[1];
-      const labelMatch = block.match(/label="([^"]+)"/)?.[1];
-      let label = nameMatch || labelMatch;
+      const rootName = getRootComponentName(block);
 
-      if (!label) {
-        if (block.includes("<Steps")) label = "Steps";
-        else if (block.includes("<Descriptions")) label = "Descriptions";
-        else if (block.includes("<Divider")) label = "Divider";
-        else label = `Bloque`;
+      switch (rootName) {
+        case "Form.Item": {
+          const nameMatch = block.match(/name="([^"]+)"/)?.[1];
+          const labelMatch = block.match(/label="([^"]+)"/)?.[1];
+          return { id, label: nameMatch || labelMatch || "Form.Item" };
+        }
+        case "Watermark":
+          return { id, label: "Watermark" };
+        case "Steps":
+          return { id, label: "Steps" };
+        case "Descriptions":
+          return { id, label: "Descriptions" };
+        case "Divider":
+          return { id, label: "Divider" };
+        case "Tour":
+          return { id, label: "Tour" };
+        case "FloatButton":
+          return { id, label: "FloatButton" };
+        case "QRCode":
+          return { id, label: "QRCode" };
+        case "Image.PreviewGroup":
+          return { id, label: "Image PreviewGroup" };
+        default:
+          return { id, label: "Bloque" };
       }
-
-      return { id, label };
     });
   }, [inputsBlocks]);
 
@@ -134,13 +152,10 @@ export default function Home() {
 
   const handleUpdateInput = useCallback(
     (inputId: string, newCodeBlock: string) => {
-      // Actualizar el bloque modificado y el mapa
       const updatedBlocks = inputsBlocks.map((block) => {
         const id = blocksToId.current.get(block);
         if (id === inputId) {
-          // Eliminar la clave vieja (bloque antiguo)
           blocksToId.current.delete(block);
-          // Asignar nuevo bloque al mismo ID
           blocksToId.current.set(newCodeBlock, inputId);
           return newCodeBlock;
         }
@@ -375,6 +390,7 @@ export default function Home() {
                 onClear={handleClear}
                 isPreviewExpanded={isPreviewExpanded}
                 setIsPreviewExpanded={setIsPreviewExpanded}
+                isPreviewVisible={!showCode && editingMode !== "code"}
               />
 
               {showVersionWarning && (
