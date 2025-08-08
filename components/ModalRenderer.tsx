@@ -1,5 +1,4 @@
-"use client";
-
+// components/ModalRenderer.tsx (asegurate que no espera getInputType como prop)
 import React from "react";
 import { getInputType } from "@/utils/getInputType";
 import { modalMap } from "@/utils/modalMap";

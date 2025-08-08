@@ -1,305 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import { v4 as uuidv4 } from "uuid";
-import SidebarBuilder from "../components/SidebarBuilder";
-import PreviewArea from "../components/PreviewArea";
-import CodeEditor from "../components/CodeEditor";
-import InputList from "../components/InputList";
-import EditActions from "../components/EditActions";
-import PromptInput from "../components/PromptInput";
-import VersionSelector from "../components/VersionSelector";
-import ActionBar from "../components/ActionBar";
-import Headers from "../components/Headers";
-import { useAntdVersion } from "../context/AntdVersionContext";
-import { jsxParserComponentsByVersion } from "@/constants/antd/jsxParserComponentsByVersion";
-import { buildMessages, fetchGeneratedCode } from "../utils/generateCode";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import Headers from "@/components/Headers";
+import PromptInput from "@/components/PromptInput";
+import VersionSelector from "@/components/VersionSelector";
+import ActionBar from "@/components/ActionBar";
+import SidebarBuilder from "@/components/SidebarBuilder";
+import InputList from "@/components/InputList";
+import CodeEditor from "@/components/CodeEditor";
+import PreviewArea from "@/components/PreviewArea";
+import EditActions from "@/components/EditActions";
+import { useFormBuilderLogic } from "@/hooks/useFormBuilderLogic";
 
 export default function Home() {
-  const { antdVersion, getBaseCode } = useAntdVersion();
-  const components = jsxParserComponentsByVersion[antdVersion];
-  const previewRef = useRef<HTMLDivElement>(null);
+  const logic = useFormBuilderLogic();
 
-  // Mantener mapa bloque -> id persistente
-  const blocksToId = useRef(new Map<string, string>());
-
-  // Estados generales
-  const [isStylesLoaded, setIsStylesLoaded] = useState(false);
-  const [prompt, setPrompt] = useState("");
-  const [code, setCode] = useState<string>("");
-  const [versions, setVersions] = useState<any[]>([]);
-  const [activeVersionId, setActiveVersionId] = useState<number | null>(null);
-  const [showCode, setShowCode] = useState(false);
-  const [editingMode, setEditingMode] = useState<"builder" | "code">("builder");
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showVersionWarning, setShowVersionWarning] = useState(false);
-  const [prevAntdVersion, setPrevAntdVersion] = useState<string | null>(null);
-  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
-
-  // --- Nuevo: manejo inputs para InputList ---
-  function parseInputsFromCodeInOrder(code: string) {
-    const inputRegex = /<Form\.Item[\s\S]*?<\/Form\.Item>/g;
-    const stepsRegex = /<Steps[\s\S]*?<\/Steps>/g;
-    const descriptionsRegex = /<Descriptions[\s\S]*?<\/Descriptions>/g;
-    const dividerRegex = /<Divider\s?\/?>/g;
-
-    const externalComponentsRegexes: RegExp[] = [
-      /<Tour[\s\S]*?<\/Tour>/g,
-      /<FloatButton[\s\S]*?\/>/g,
-      /<Watermark[\s\S]*?<\/Watermark>/g,
-      /<QRCode[\s\S]*?\/>/g,
-      /<Image\.PreviewGroup[\s\S]*?<\/Image\.PreviewGroup>/g,
-    ];
-
-    const matches = [
-      ...(code.match(inputRegex) || []),
-      ...(code.match(stepsRegex) || []),
-      ...(code.match(descriptionsRegex) || []),
-      ...(code.match(dividerRegex) || []),
-      ...externalComponentsRegexes.flatMap((regex) => {
-        const found = code.match(regex);
-        return found ? found : [];
-      }),
-    ];
-
-    const sorted = matches
-      .map((match) => ({
-        match,
-        index: code.indexOf(match),
-      }))
-      .sort((a, b) => a.index - b.index)
-      .map(({ match }) => match);
-
-    return sorted;
-  }
-
-  const inputsBlocks = useMemo(() => parseInputsFromCodeInOrder(code), [code]);
-
-  const inputs = useMemo(() => {
-    // Limpiar bloques no existentes
-    blocksToId.current.forEach((_, key) => {
-      if (!inputsBlocks.includes(key)) {
-        blocksToId.current.delete(key);
-      }
-    });
-
-    // Asignar IDs a bloques nuevos
-    inputsBlocks.forEach((block) => {
-      if (!blocksToId.current.has(block)) {
-        blocksToId.current.set(block, uuidv4());
-      }
-    });
-
-    // Función para obtener el nombre del componente raíz
-    const getRootComponentName = (block: string) => {
-      const match = block.match(/^<([A-Za-z0-9_.]+)/);
-      return match ? match[1] : null;
-    };
-
-    return inputsBlocks.map((block) => {
-      const id = blocksToId.current.get(block)!;
-      const rootName = getRootComponentName(block);
-
-      switch (rootName) {
-        case "Form.Item": {
-          const nameMatch = block.match(/name="([^"]+)"/)?.[1];
-          const labelMatch = block.match(/label="([^"]+)"/)?.[1];
-          return { id, label: nameMatch || labelMatch || "Form.Item" };
-        }
-        case "Watermark":
-          return { id, label: "Watermark" };
-        case "Steps":
-          return { id, label: "Steps" };
-        case "Descriptions":
-          return { id, label: "Descriptions" };
-        case "Divider":
-          return { id, label: "Divider" };
-        case "Tour":
-          return { id, label: "Tour" };
-        case "FloatButton":
-          return { id, label: "FloatButton" };
-        case "QRCode":
-          return { id, label: "QRCode" };
-        case "Image.PreviewGroup":
-          return { id, label: "Image PreviewGroup" };
-        default:
-          return { id, label: "Bloque" };
-      }
-    });
-  }, [inputsBlocks]);
-
-  const reorderCodeByInputIds = useCallback(
-    (newOrder: string[]) => {
-      const idToBlock = new Map<string, string>();
-      inputsBlocks.forEach((block) => {
-        const id = blocksToId.current.get(block);
-        if (id) idToBlock.set(id, block);
-      });
-
-      const reorderedBlocks = newOrder
-        .map((id) => idToBlock.get(id))
-        .filter(Boolean) as string[];
-
-      const newCode = reorderedBlocks.join("\n");
-      setCode(newCode);
-      setHasUnsavedChanges(true);
-    },
-    [inputsBlocks]
-  );
-
-  const handleUpdateInput = useCallback(
-    (inputId: string, newCodeBlock: string) => {
-      const updatedBlocks = inputsBlocks.map((block) => {
-        const id = blocksToId.current.get(block);
-        if (id === inputId) {
-          blocksToId.current.delete(block);
-          blocksToId.current.set(newCodeBlock, inputId);
-          return newCodeBlock;
-        }
-        return block;
-      });
-
-      setCode(updatedBlocks.join("\n"));
-      setHasUnsavedChanges(true);
-    },
-    [inputsBlocks]
-  );
-
-  // Load styles
-  useEffect(() => {
-    if (document.readyState === "complete") {
-      setIsStylesLoaded(true);
-    } else {
-      const onLoad = () => setIsStylesLoaded(true);
-      window.addEventListener("load", onLoad);
-      return () => window.removeEventListener("load", onLoad);
-    }
-  }, []);
-
-  // Carga base de código al cambiar versión
-  useEffect(() => {
-    if (!code.trim()) {
-      const baseCode = getBaseCode(antdVersion);
-      setCode(baseCode);
-    }
-  }, [antdVersion, getBaseCode]);
-
-  // Detectar cambios
-  useEffect(() => {
-    const activeVersion = versions.find((v) => v.id === activeVersionId);
-    const trimmedCode = code.trim();
-    const trimmedCurrent = (activeVersion?.code || "").trim();
-    setHasUnsavedChanges(trimmedCode !== trimmedCurrent);
-  }, [code, activeVersionId, versions]);
-
-  // Aviso downgrade versión
-  useEffect(() => {
-    if (prevAntdVersion && antdVersion < prevAntdVersion) {
-      setShowVersionWarning(true);
-    }
-    setPrevAntdVersion(antdVersion);
-  }, [antdVersion]);
-
-  useEffect(() => {
-    if (isPreviewExpanded) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-  }, [isPreviewExpanded]);
-
-  const handleVersionChange = (id: number) => {
-    const version = versions.find((v) => v.id === id);
-    if (version) {
-      setActiveVersionId(id);
-      setCode(version.code);
-      setEditingMode("builder");
-      setHasUnsavedChanges(false);
-    }
-  };
-
-  const handleSave = () => {
-    const maxId = versions.length ? Math.max(...versions.map((v) => v.id)) : 0;
-    const newVersion = {
-      id: maxId + 1,
-      prompt: "Manual edit",
-      code,
-      messages: versions.find((v) => v.id === activeVersionId)?.messages || [],
-    };
-    setVersions([...versions, newVersion]);
-    setActiveVersionId(newVersion.id);
-    setHasUnsavedChanges(false);
-  };
-
-  const handleCancel = () => {
-    const activeVersion = versions.find((v) => v.id === activeVersionId);
-    setCode(activeVersion?.code || getBaseCode(antdVersion));
-    setHasUnsavedChanges(false);
-    setEditingMode("builder");
-  };
-
-  const handleClear = () => {
-    setCode("");
-    setHasUnsavedChanges(true);
-  };
-
-  const handleDownloadImage = async () => {
-    if (!previewRef.current) return;
-    try {
-      const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(previewRef.current, {
-        cacheBust: true,
-        backgroundColor: "#ffffff",
-        pixelRatio: 2,
-      });
-      const link = document.createElement("a");
-      link.download = `form-version-${activeVersionId ?? "latest"}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch {
-      alert("No se pudo exportar la imagen.");
-    }
-  };
-
-  // Generación código con IA
-  const onGenerateCode = async () => {
-    if (!prompt.trim()) return alert("Prompt vacío");
-    setIsGenerating(true);
-    try {
-      await fetchGeneratedCode(
-        prompt,
-        code,
-        versions.find((v) => v.id === activeVersionId),
-        versions,
-        ({ code: newCode, messages, newVersionId }) => {
-          setCode(newCode);
-          setVersions((prev) => [
-            ...prev,
-            { id: newVersionId, prompt, code: newCode, messages },
-          ]);
-          setActiveVersionId(newVersionId);
-          setPrompt("");
-          setShowCode(false);
-          setEditingMode("builder");
-          setHasUnsavedChanges(false);
-        }
-      );
-    } catch (e) {
-      alert("Error al generar: " + e);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const getCodeBlockByInputId = (id: string) => {
-    const index = inputs.findIndex((input) => input.id === id);
-    return inputsBlocks[index];
-  };
-
-  if (!isStylesLoaded) {
+  if (!logic.isStylesLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
         <div className="text-center">
@@ -313,87 +30,79 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white relative">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080801a_1px,transparent_1px),linear-gradient(to_bottom,#8080801a_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-
       <Navbar />
-
-      <div className={`relative ${isPreviewExpanded ? "z-[100]" : "z-10"}`}>
-        {/* Header */}
+      <div
+        className={`relative ${logic.isPreviewExpanded ? "z-[100]" : "z-10"}`}
+      >
         <Headers />
-
-        {/* Contenido con márgenes laterales */}
         <div className="px-6 md:px-8 max-w-7xl mx-auto space-y-6 pb-6">
           <PromptInput
-            prompt={prompt}
-            setPrompt={setPrompt}
-            onGenerate={onGenerateCode}
-            isGenerating={isGenerating}
+            prompt={logic.prompt}
+            setPrompt={logic.setPrompt}
+            onGenerate={logic.onGenerateCode}
+            isGenerating={logic.isGenerating}
           />
           <VersionSelector
-            versions={versions}
-            activeVersionId={activeVersionId}
-            setActiveVersionId={handleVersionChange}
+            versions={logic.versions}
+            activeVersionId={logic.activeVersionId}
+            setActiveVersionId={logic.handleVersionChange}
           />
           <ActionBar
-            showCode={showCode}
-            setShowCode={setShowCode}
-            code={code}
+            showCode={logic.showCode}
+            setShowCode={logic.setShowCode}
+            code={logic.code}
             copyToClipboard={async (text) => {
-              try {
-                await navigator.clipboard.writeText(text);
-                alert("Código copiado!");
-              } catch {
-                alert("Error al copiar");
-              }
+              await navigator.clipboard.writeText(text);
+              alert("Código copiado!");
             }}
-            downloadImage={handleDownloadImage}
+            downloadImage={logic.handleDownloadImage}
           />
         </div>
-
-        {/* Grilla sin márgenes laterales para aprovechar todo el ancho */}
         <div className="px-4 md:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
             <div className="lg:col-span-2">
               <SidebarBuilder
                 onInsert={(codeBlock) =>
-                  setCode((prev) => prev + "\n" + codeBlock)
+                  logic.setCode((prev) => prev + "\n" + codeBlock)
                 }
-                setEditingMode={setEditingMode}
+                setEditingMode={logic.setEditingMode}
               />
             </div>
-
             <div className="lg:col-span-3">
               <InputList
-                inputs={inputs}
-                onReorder={reorderCodeByInputIds}
-                onUpdateInput={handleUpdateInput}
-                getCodeBlockByInputId={getCodeBlockByInputId}
+                inputs={logic.inputs}
+                onReorder={logic.reorderCodeByInputIds}
+                onUpdateInput={logic.handleUpdateInput}
+                getCodeBlockByInputId={logic.getCodeBlockByInputId}
               />
             </div>
-
             <div className="lg:col-span-7 space-y-4">
-              {showCode || editingMode === "code" ? (
-                <CodeEditor localCode={code} setLocalCode={setCode} />
+              {logic.showCode || logic.editingMode === "code" ? (
+                <CodeEditor
+                  localCode={logic.code}
+                  setLocalCode={logic.setCode}
+                />
               ) : (
                 <PreviewArea
-                  code={code}
-                  components={components}
-                  previewRef={previewRef}
-                  isExpanded={isPreviewExpanded}
-                  setIsExpanded={setIsPreviewExpanded}
+                  code={logic.code}
+                  components={logic.components}
+                  previewRef={logic.previewRef}
+                  isExpanded={logic.isPreviewExpanded}
+                  setIsExpanded={logic.setIsPreviewExpanded}
                 />
               )}
-
               <EditActions
-                hasUnsavedChanges={hasUnsavedChanges}
-                onSave={handleSave}
-                onCancel={handleCancel}
-                onClear={handleClear}
-                isPreviewExpanded={isPreviewExpanded}
-                setIsPreviewExpanded={setIsPreviewExpanded}
-                isPreviewVisible={!showCode && editingMode !== "code"}
+                hasUnsavedChanges={logic.hasUnsavedChanges}
+                onSave={logic.handleSave}
+                onCancel={logic.handleCancel}
+                onClear={logic.handleClear}
+                isPreviewExpanded={logic.isPreviewExpanded}
+                setIsPreviewExpanded={logic.setIsPreviewExpanded}
+                isPreviewVisible={
+                  !logic.showCode && logic.editingMode !== "code"
+                }
               />
-
-              {showVersionWarning && (
+              {logic.showVersionWarning && (
                 <div className="mt-4">
                   <div
                     role="alert"
@@ -402,7 +111,7 @@ export default function Home() {
                     Has cambiado a una versión más antigua de Ant Design.
                     Algunos campos podrían no funcionar correctamente.
                     <button
-                      onClick={() => setShowVersionWarning(false)}
+                      onClick={() => logic.setShowVersionWarning(false)}
                       className="ml-4 underline"
                     >
                       Cerrar
@@ -414,7 +123,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
       <Footer />
     </div>
   );
