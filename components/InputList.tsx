@@ -11,6 +11,7 @@ import { EditOutlined } from "@ant-design/icons";
 import ModalRenderer from "./ModalRenderer";
 import { useInputEditorLogic } from "@/hooks/useInputEditorLogic";
 import { useInputHierarchy } from "@/hooks/useInputHierarchy";
+import { filterRootInputs } from "@/utils/inputFilters"; // <-- Importá la función
 
 interface InputItem {
   id: string;
@@ -34,7 +35,7 @@ export default function InputList({
   const { editingInputId, codeBlock, openEditor, closeEditor, saveEditor } =
     useInputEditorLogic(inputs, getCodeBlockByInputId, onUpdateInput);
 
-  // Usamos inputs con código para jerarquía
+  // Mapeamos inputs con código
   const inputsWithCode = React.useMemo(
     () =>
       inputs.map((input) => ({
@@ -45,10 +46,18 @@ export default function InputList({
     [inputs, getCodeBlockByInputId]
   );
 
-  const { hierarchy, expanded, toggleExpand } =
-    useInputHierarchy(inputsWithCode);
+  // FILTRAMOS solo inputs raíz para la jerarquía y render
+  const rootInputs = React.useMemo(
+    () =>
+      filterRootInputs(inputsWithCode).map((input) => ({
+        ...input,
+        code: input.code || "",
+      })),
+    [inputsWithCode]
+  );
 
-  // Función recursiva para renderizar inputs y sus hijos indentados
+  const { hierarchy, expanded, toggleExpand } = useInputHierarchy(rootInputs);
+
   const renderInputItem = (input: InputItem, index: number, level = 0) => {
     const hasChildren = hierarchy[input.id]?.length > 0;
     const children = hierarchy[input.id] || [];
@@ -134,7 +143,8 @@ export default function InputList({
               ref={provided.innerRef}
               className="space-y-2 bg-gray-50 p-4 rounded border border-gray-300 min-h-[300px]"
             >
-              {inputs.map((input, index) => renderInputItem(input, index))}
+              {/* Renderizamos solo los inputs raíz */}
+              {rootInputs.map((input, index) => renderInputItem(input, index))}
               {provided.placeholder}
             </div>
           )}
