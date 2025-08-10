@@ -38,11 +38,15 @@ export default function InputList({
   // Mapeamos inputs con código
   const inputsWithCode = React.useMemo(
     () =>
-      inputs.map((input) => ({
-        id: input.id,
-        label: input.label,
-        code: getCodeBlockByInputId(input.id) || "",
-      })),
+      inputs.map((input) => {
+        const code = getCodeBlockByInputId(input.id) || "";
+        const match = code.match(/name="([^"]+)"/);
+        return {
+          id: input.id,
+          label: match ? match[1] : input.label,
+          code,
+        };
+      }),
     [inputs, getCodeBlockByInputId]
   );
 

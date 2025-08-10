@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Alert } from "antd";
+import { Button, Alert, Modal } from "antd";
 import {
   DeleteOutlined,
   ArrowsAltOutlined,
@@ -24,6 +24,19 @@ export default function EditActions({
   setIsPreviewExpanded: (value: boolean) => void;
   isPreviewVisible: boolean; // 👈 NUEVO
 }) {
+  const showConfirmClear = () => {
+    Modal.confirm({
+      title: "¿Estás seguro de que quieres limpiar el código?",
+      content: "Esta acción no se puede deshacer.",
+      okText: "Sí, limpiar",
+      okType: "danger",
+      cancelText: "Cancelar",
+      onOk() {
+        onClear();
+      },
+    });
+  };
+
   return (
     <div className="mt-4">
       <div className="flex justify-between items-center gap-4 flex-wrap">
@@ -47,7 +60,11 @@ export default function EditActions({
         </div>
 
         <div className="flex gap-2">
-          <Button danger icon={<DeleteOutlined />} onClick={onClear} />
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            onClick={showConfirmClear} // Aquí cambio la llamada para pedir confirmación
+          />
 
           {isPreviewVisible && ( // 👈 SOLO si está visible el preview
             <Button

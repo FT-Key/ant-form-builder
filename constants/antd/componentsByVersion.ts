@@ -158,7 +158,7 @@ export const v5: FormComponent[] = [
   },
   {
     label: "Watermark",
-    code: `<Watermark content="Demo"><div style={{ height: 100 }}>Watermarked</div></Watermark>`,
+    code: `<Watermark content="Demo"><div style={{ minHeight: "100px" }}>Watermarked</div></Watermark>`,
   },
   {
     label: "QRCode",

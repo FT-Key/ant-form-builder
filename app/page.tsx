@@ -46,7 +46,9 @@ export default function Home() {
             versions={logic.versions}
             activeVersionId={logic.activeVersionId}
             setActiveVersionId={logic.handleVersionChange}
+            onDeleteVersion={logic.handleDeleteVersion}
           />
+
           <ActionBar
             showCode={logic.showCode}
             setShowCode={logic.setShowCode}
@@ -63,7 +65,9 @@ export default function Home() {
             <div className="lg:col-span-2">
               <SidebarBuilder
                 onInsert={(codeBlock) =>
-                  logic.setCode((prev) => prev + "\n" + codeBlock)
+                  logic.setCode(
+                    (prev) => prev + (prev.trim() ? "\n" : "") + codeBlock
+                  )
                 }
                 setEditingMode={logic.setEditingMode}
               />
@@ -81,6 +85,7 @@ export default function Home() {
                 <CodeEditor
                   localCode={logic.code}
                   setLocalCode={logic.setCode}
+                  onSave={logic.handleSave}
                 />
               ) : (
                 <PreviewArea

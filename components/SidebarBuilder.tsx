@@ -5,6 +5,7 @@ import { useAntdVersion } from "../context/AntdVersionContext";
 import { componentsByVersion } from "@/constants/antd/componentsByVersion";
 import AntdVersionSelector from "./AntdVersionSelector";
 import { Input } from "antd";
+import { useFormBuilderLogic } from "@/hooks/useFormBuilderLogic";
 
 export default function SidebarBuilder({
   onInsert,
@@ -15,6 +16,7 @@ export default function SidebarBuilder({
 }) {
   const { antdVersion } = useAntdVersion();
   const [search, setSearch] = useState("");
+  const { getUniqueCode } = useFormBuilderLogic();
 
   const buttons = componentsByVersion[antdVersion] || [];
 
@@ -46,7 +48,10 @@ export default function SidebarBuilder({
         {filteredButtons.map(({ label, code }) => (
           <button
             key={label}
-            onClick={() => onInsert("\n" + code, label)}
+            onClick={() => {
+              const uniqueCode = getUniqueCode(code, label);
+              onInsert(uniqueCode, label);
+            }}
             className="block w-full text-left px-3 py-2 border border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200 rounded"
           >
             <span className="text-gray-400 mr-2">+</span>

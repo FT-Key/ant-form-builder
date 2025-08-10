@@ -29,26 +29,28 @@ export default function ActionBar({
         backgroundColor: "#ffffff",
         backgroundImage: isEmpty
           ? `repeating-linear-gradient(
-         45deg,
-         #f0f0f0,
-         #f0f0f0 1px,
-         transparent 2px,
-         transparent 20px
-       )`
+              45deg,
+              #f0f0f0,
+              #f0f0f0 1px,
+              transparent 2px,
+              transparent 20px
+            )`
           : "none",
       }}
     >
-      {!isEmpty && (
-        <div className="flex justify-between items-center">
-          <Button
-            icon={showCode ? <EyeOutlined /> : <CodeOutlined />}
-            onClick={() => setShowCode(!showCode)}
-            size="large"
-            className="border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 font-medium"
-          >
-            {showCode ? "Preview Form" : "View Code"}
-          </Button>
+      <div className="flex justify-between items-center">
+        {/* Botón siempre visible */}
+        <Button
+          icon={showCode ? <EyeOutlined /> : <CodeOutlined />}
+          onClick={() => setShowCode(!showCode)}
+          size="large"
+          className="border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 font-medium"
+        >
+          {showCode ? "Preview Form" : "View Code"}
+        </Button>
 
+        {/* Este solo aparece si hay código */}
+        {!isEmpty && (
           <Button
             icon={showCode ? <CopyOutlined /> : <DownloadOutlined />}
             onClick={showCode ? () => copyToClipboard(code) : downloadImage}
@@ -57,8 +59,8 @@ export default function ActionBar({
           >
             {showCode ? "Copy Code" : "Export"}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
