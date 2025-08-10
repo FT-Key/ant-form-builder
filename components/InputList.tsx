@@ -11,7 +11,7 @@ import { EditOutlined } from "@ant-design/icons";
 import ModalRenderer from "./ModalRenderer";
 import { useInputEditorLogic } from "@/hooks/useInputEditorLogic";
 import { useInputHierarchy } from "@/hooks/useInputHierarchy";
-import { filterRootInputs } from "@/utils/inputFilters"; // <-- Importá la función
+import { filterRootInputs } from "@/utils/inputFilters";
 
 interface InputItem {
   id: string;
