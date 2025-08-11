@@ -1,5 +1,4 @@
-// hooks/useInputEditorLogic.ts
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export interface SimpleInputItem {
   id: string;
@@ -12,34 +11,54 @@ export function useInputEditorLogic(
   onUpdateInput: (id: string, newCodeBlock: string) => void
 ) {
   const [editingInputId, setEditingInputId] = useState<string | null>(null);
+  const [localCodeBlock, setLocalCodeBlock] = useState<string>("");
 
-  const openEditor = useCallback((id: string) => {
-    setEditingInputId(id);
-  }, []);
+  // Cuando abres editor, carga el código actual para editarlo localmente
+  const openEditor = useCallback(
+    (id: string) => {
+      setEditingInputId(id);
+      const code = getCodeBlockByInputId(id) || "";
+      setLocalCodeBlock(code);
+    },
+    [getCodeBlockByInputId]
+  );
 
   const closeEditor = useCallback(() => {
     setEditingInputId(null);
+    setLocalCodeBlock("");
   }, []);
 
+  // Actualiza localCodeBlock mientras escribes en modal
+  const updateLocalCodeBlock = useCallback((newCode: string) => {
+    setLocalCodeBlock(newCode);
+  }, []);
+
+  // Guarda la edición llamando a onUpdateInput con el código local
   const saveEditor = useCallback(
-    (newCodeBlock: string) => {
+    (updatedCode: string) => {
       if (!editingInputId) return;
-      onUpdateInput(editingInputId, newCodeBlock);
-      setEditingInputId(null);
+      onUpdateInput(editingInputId, updatedCode);
+      closeEditor();
     },
-    [editingInputId, onUpdateInput]
+    [editingInputId, onUpdateInput, closeEditor]
   );
 
-  const codeBlock = useMemo(() => {
-    if (!editingInputId) return "";
-    return getCodeBlockByInputId(editingInputId) ?? "";
+  // Si cambias de input que editas (editingInputId), sincroniza localCodeBlock
+  useEffect(() => {
+    if (editingInputId) {
+      const code = getCodeBlockByInputId(editingInputId) || "";
+      setLocalCodeBlock(code);
+    } else {
+      setLocalCodeBlock("");
+    }
   }, [editingInputId, getCodeBlockByInputId]);
 
   return {
     editingInputId,
-    codeBlock,
+    codeBlock: localCodeBlock,
     openEditor,
     closeEditor,
     saveEditor,
+    updateLocalCodeBlock, // para que modal actualice el código en tiempo real
   };
 }

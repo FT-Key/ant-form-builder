@@ -16,7 +16,7 @@ import { filterRootInputs } from "@/utils/inputFilters";
 interface InputItem {
   id: string;
   label: string;
-  code?: string; // necesario para jerarquía
+  code?: string;
 }
 
 interface InputListProps {
@@ -32,8 +32,14 @@ export default function InputList({
   onUpdateInput,
   getCodeBlockByInputId,
 }: InputListProps) {
-  const { editingInputId, codeBlock, openEditor, closeEditor, saveEditor } =
-    useInputEditorLogic(inputs, getCodeBlockByInputId, onUpdateInput);
+  const {
+    editingInputId,
+    codeBlock,
+    openEditor,
+    closeEditor,
+    saveEditor,
+    updateLocalCodeBlock, // <-- agregamos esta función del hook
+  } = useInputEditorLogic(inputs, getCodeBlockByInputId, onUpdateInput);
 
   // Mapeamos inputs con código
   const inputsWithCode = React.useMemo(
@@ -102,7 +108,9 @@ export default function InputList({
               </div>
               <EditOutlined
                 className="text-gray-500 hover:text-blue-600 cursor-pointer"
-                onClick={() => openEditor(input.id)}
+                onClick={() => {
+                  openEditor(input.id);
+                }}
               />
             </div>
           )}
@@ -160,6 +168,7 @@ export default function InputList({
         codeBlock={codeBlock || ""}
         onCancel={closeEditor}
         onSave={saveEditor}
+        onChangeCode={updateLocalCodeBlock}
       />
     </>
   );

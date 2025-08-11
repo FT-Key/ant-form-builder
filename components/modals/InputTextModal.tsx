@@ -3,6 +3,7 @@
 import { Modal, Input, Checkbox, Select, Divider, Collapse } from "antd";
 import { useEffect, useState } from "react";
 import { useAntdVersion } from "@/context/AntdVersionContext";
+import { useInputValidation } from "@/hooks/useInputValidation";
 
 const { Option } = Select;
 const { Panel } = Collapse;
@@ -12,6 +13,7 @@ interface InputTextModalProps {
   codeBlock: string;
   onCancel: () => void;
   onSave: (updatedCode: string) => void;
+  onChangeCode?: (newCode: string) => void;
 }
 
 export default function InputTextModal({
@@ -104,12 +106,19 @@ export default function InputTextModal({
 </Form.Item>`;
   };
 
+  const { errorLabel, errorName, validateAndSave } = useInputValidation({
+    label,
+    name,
+    onSave,
+    buildCode: buildInputCode,
+  });
+
   return (
     <Modal
       open={open}
       title="Editar Input Text"
       onCancel={onCancel}
-      onOk={() => onSave(buildInputCode())}
+      onOk={validateAndSave}
       okText="Guardar"
       cancelText="Cancelar"
     >
@@ -120,13 +129,17 @@ export default function InputTextModal({
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Etiqueta"
           addonBefore="label"
+          status={errorLabel ? "error" : undefined}
         />
+        {errorLabel && <div className="text-red-500">{errorLabel}</div>}
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nombre (name)"
           addonBefore="name"
+          status={errorName ? "error" : undefined}
         />
+        {errorName && <div className="text-red-500">{errorName}</div>}
         <Input
           value={placeholder}
           onChange={(e) => setPlaceholder(e.target.value)}

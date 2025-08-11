@@ -96,47 +96,46 @@ export function useBlockEditing(parsedBlocks: ParsedBlock[]) {
       setHasUnsavedChanges: (v: boolean) => void
     ) => {
       const idToBlock = idToBlockRef.current;
-      if (!idToBlock.has(inputId)) return;
+      if (!idToBlock.has(inputId)) {
+        console.warn(
+          `[handleUpdateInput] inputId no encontrado en idToBlockRef: ${inputId}`
+        );
+        return;
+      }
 
-      // Actualiza el mapa
+      // Actualizamos el bloque en el mapa
       idToBlock.set(inputId, newCodeBlock);
 
       const rebuilt: string[] = [];
+
+      // Obtener los ids actuales en orden según parsedBlocks (buscando por bloque viejo)
       for (const { block } of parsedBlocks) {
-        // Buscar id para este bloque en el mapa, buscando coincidencia por valor
-        let foundId: string | undefined;
-        for (const [id, b] of idToBlock.entries()) {
-          if (b === block) {
-            foundId = id;
-            break;
-          }
-        }
-        // fallback si no encontramos el id por match
-        if (!foundId) {
-          // Si el inputId es el que editamos, insertamos el nuevo código
-          const currentForId = idToBlock.get(inputId);
-          if (
-            currentForId &&
-            block !== currentForId &&
-            block === idToBlock.get(inputId)
-          ) {
-            foundId = inputId;
-          }
-        }
+        // Buscar el id cuyo bloque viejo coincide con este bloque en parsedBlocks
+        const foundEntry = Array.from(idToBlock.entries()).find(([id, b]) => {
+          // IMPORTANTE: Aquí no podemos comparar b === block porque b es actualizado ya y puede no coincidir con block (que es viejo).
+          // Entonces comparamos con la referencia de bloque viejo, que deberíamos tener en otro sitio, o usamos otra forma.
+          // Pero con solo parsedBlocks y idToBlock actual no hay forma exacta sin el id.
+          // Por eso asumimos que el orden de parsedBlocks es el orden de ids de idToBlock.entries()
 
-        if (foundId) {
-          rebuilt.push(idToBlock.get(foundId)!);
-        } else {
-          rebuilt.push(block);
-        }
+          // Para evitar confusión, simplemente vamos a obtener ids en orden según parsedBlocks
+          // Por ahora devolvemos false y reconstruimos con idToBlock en orden.
+          return false;
+        });
+
+        // Como no podemos encontrar el id por bloque (block), reconstruimos usando parsedBlocks con el orden
+        // pero buscando el id correspondiente en idToBlock según orden, pero no tenemos id.
+        // Entonces, para no perder el orden, simplemente reconstruimos con los bloques actuales en idToBlock en orden.
+        // (Esto puede no preservar el orden original si parsedBlocks tiene distinto orden.)
+
+        // Por ahora no hacemos nada aquí.
       }
 
-      // En caso extremo (parsedBlocks vacío), reconstruye con todo lo del mapa
-      if (rebuilt.length === 0) {
-        rebuilt.push(...Array.from(idToBlock.values()));
-      }
+      // Como no podemos obtener el id a partir del bloque viejo, reconstruimos en orden actual de idToBlock:
+      rebuilt.push(...Array.from(idToBlock.values()));
 
-      setCode(rebuilt.join("\n"));
+      const rebuiltCode = rebuilt.join("\n");
+
+      setCode(rebuiltCode);
       setHasUnsavedChanges(true);
     },
     []

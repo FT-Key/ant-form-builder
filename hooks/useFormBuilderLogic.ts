@@ -12,7 +12,7 @@ import {
   getRootName,
 } from "@/utils/formBuilderUtils";
 import { useVersions } from "./useVersions";
-import { useBlockEditing } from "./useBlockEditing";
+import { useBlockEditing, ParsedBlock } from "./useBlockEditing";
 
 interface SimpleInputItem {
   id: string;
@@ -24,9 +24,7 @@ export function useFormBuilderLogic() {
   const components = jsxParserComponentsByVersion[antdVersion];
   const previewRef = useRef<HTMLDivElement | null>(null);
 
-  // Estados UI / lógica
-  const [isStylesLoaded, setIsStylesLoaded] = useState(false);
-  const [prompt, setPrompt] = useState("");
+  // Estados UI y lógicos
   const [code, setCode] = useState<string>("");
   const [showCode, setShowCode] = useState(false);
   const [editingMode, setEditingMode] = useState<"builder" | "code">("builder");
@@ -34,12 +32,19 @@ export function useFormBuilderLogic() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showVersionWarning, setShowVersionWarning] = useState(false);
   const [prevAntdVersion, setPrevAntdVersion] = useState<string | null>(null);
+  const [isStylesLoaded, setIsStylesLoaded] = useState(false);
   const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
 
-  // parsedBlocks
-  const parsedBlocks = useMemo(() => parseInputsFromCodeInOrder(code), [code]);
+  // Estado del prompt para generación AI
+  const [prompt, setPrompt] = useState("");
 
-  // Block editing hook
+  // Parsear bloques en orden (recalcula al cambiar código)
+  const parsedBlocks: ParsedBlock[] = useMemo(
+    () => parseInputsFromCodeInOrder(code),
+    [code]
+  );
+
+  // Hook para manejar id->block, actualización y sincronización
   const {
     idToBlockRef,
     syncIdToBlockMap,
@@ -49,7 +54,7 @@ export function useFormBuilderLogic() {
     getUniqueCode,
   } = useBlockEditing(parsedBlocks);
 
-  // Versions hook
+  // Hook para versiones
   const {
     versions,
     setVersions,
@@ -60,28 +65,32 @@ export function useFormBuilderLogic() {
     handleDeleteVersion,
   } = useVersions();
 
-  // Sincronizar mapa id -> block
+  // Sincronizar mapa id->block cuando cambian parsedBlocks
   useEffect(() => {
     syncIdToBlockMap();
   }, [parsedBlocks, syncIdToBlockMap]);
 
-  // inputs (id + label)
+  // Construir inputs: id + label, basado en parsedBlocks y mapa id->block
   const inputs = useMemo<SimpleInputItem[]>(() => {
     const arr: SimpleInputItem[] = [];
     const map = idToBlockRef.current;
+
     for (const { block } of parsedBlocks) {
       let foundId: string | undefined;
+      // Buscar id por bloque exacto
       for (const [id, b] of map.entries()) {
         if (b === block) {
           foundId = id;
           break;
         }
       }
+      // Si no existe id, crear uno y agregar al mapa
       if (!foundId) {
         foundId = uuidv4();
         map.set(foundId, block);
       }
 
+      // Etiqueta del input, priorizando nombre o label dentro del bloque
       const root = getRootName(block);
       let label = root || "Bloque";
       if (root === "Form.Item") {
@@ -90,12 +99,21 @@ export function useFormBuilderLogic() {
           block.match(/label="([^"]+)"/)?.[1] ||
           "Form.Item";
       }
+
       arr.push({ id: foundId, label });
     }
+
     return arr;
   }, [parsedBlocks, idToBlockRef]);
 
-  // Otros efectos similares a los originales (stylesLoaded, previewExpanded, versiones, etc)
+  // Efecto para detectar cambio de versión menor a mayor (mostrar warning)
+  useEffect(() => {
+    if (prevAntdVersion && antdVersion < prevAntdVersion)
+      setShowVersionWarning(true);
+    setPrevAntdVersion(antdVersion);
+  }, [antdVersion, prevAntdVersion]);
+
+  // Efecto para cargar estilos (ej: esperar a que cargue la página)
   useEffect(() => {
     if (document.readyState === "complete") setIsStylesLoaded(true);
     else {
@@ -105,66 +123,64 @@ export function useFormBuilderLogic() {
     }
   }, []);
 
+  // Efecto para cargar código base si está vacío (ej: al cambiar versión)
   useEffect(() => {
     if (!code.trim()) {
       const base = getBaseCode(antdVersion);
       setCode(base);
     }
-  }, [antdVersion, getBaseCode]);
+  }, [antdVersion, code, getBaseCode]);
 
+  // Efecto para comparar código actual con versión activa y marcar cambios
   useEffect(() => {
     const activeVersion = versions.find((v) => v.id === activeVersionId);
     setHasUnsavedChanges(code.trim() !== (activeVersion?.code || "").trim());
   }, [code, activeVersionId, versions]);
 
-  useEffect(() => {
-    if (prevAntdVersion && antdVersion < prevAntdVersion)
-      setShowVersionWarning(true);
-    setPrevAntdVersion(antdVersion);
-  }, [antdVersion]);
-
+  // Controlar overflow del body según preview expandido
   useEffect(() => {
     document.body.style.overflow = isPreviewExpanded ? "hidden" : "";
   }, [isPreviewExpanded]);
 
-  // Wrappers para funciones que requieren setters externos
-  const reorderInputs = useCallback(
+  // Wrappers que usan setters internos para reorder y update
+  const reorderCodeByInputIdsWrapped = useCallback(
     (newOrder: string[]) =>
       reorderCodeByInputIds(newOrder, setCode, setHasUnsavedChanges),
     [reorderCodeByInputIds]
   );
 
-  const updateInputBlock = useCallback(
-    (inputId: string, newCodeBlock: string) =>
-      handleUpdateInput(
+  const handleUpdateInputWrapped = useCallback(
+    (inputId: string, newCodeBlock: string) => {
+      return handleUpdateInput(
         inputId,
         newCodeBlock,
         parsedBlocks,
         setCode,
         setHasUnsavedChanges
-      ),
+      );
+    },
     [handleUpdateInput, parsedBlocks]
   );
 
-  // Funciones de control para versiones usando el hook useVersions
-  const onVersionChange = useCallback(
+  // Wrappers para control de versiones (manejan setters)
+  const handleVersionChangeWrapped = useCallback(
     (id: number | null) =>
       handleVersionChange(id, setCode, setEditingMode, setHasUnsavedChanges),
     [handleVersionChange]
   );
 
-  const onVersionSave = useCallback(
+  const handleSaveWrapped = useCallback(
     () => handleSave(code, "Manual edit", setHasUnsavedChanges),
     [handleSave, code]
   );
 
-  const onVersionDelete = useCallback(
-    (id: number) => handleDeleteVersion(id, setCode, onVersionChange),
-    [handleDeleteVersion, onVersionChange]
+  const handleDeleteVersionWrapped = useCallback(
+    (id: number) =>
+      handleDeleteVersion(id, setCode, handleVersionChangeWrapped),
+    [handleDeleteVersion, handleVersionChangeWrapped]
   );
 
-  // Resto de funciones (cancel, clear, download, generate) las pones como antes
-
+  // Funciones adicionales del builder (cancelar, limpiar, descargar, generar)
   const handleCancel = useCallback(() => {
     const activeVersion = versions.find((v) => v.id === activeVersionId);
     setCode(activeVersion?.code || getBaseCode(antdVersion));
@@ -222,7 +238,14 @@ export function useFormBuilderLogic() {
     } finally {
       setIsGenerating(false);
     }
-  }, [prompt, code, versions, activeVersionId]);
+  }, [
+    prompt,
+    code,
+    versions,
+    activeVersionId,
+    setVersions,
+    setActiveVersionId,
+  ]);
 
   return {
     previewRef,
@@ -247,14 +270,14 @@ export function useFormBuilderLogic() {
     setIsPreviewExpanded,
     inputs,
 
-    reorderCodeByInputIds: reorderInputs,
-    handleUpdateInput: updateInputBlock,
+    reorderCodeByInputIds: reorderCodeByInputIdsWrapped,
+    handleUpdateInput: handleUpdateInputWrapped,
     getUniqueCode,
     getCodeBlockByInputId,
 
-    handleVersionChange: onVersionChange,
-    handleSave: onVersionSave,
-    handleDeleteVersion: onVersionDelete,
+    handleVersionChange: handleVersionChangeWrapped,
+    handleSave: handleSaveWrapped,
+    handleDeleteVersion: handleDeleteVersionWrapped,
     handleCancel,
     handleClear,
     handleDownloadImage,
