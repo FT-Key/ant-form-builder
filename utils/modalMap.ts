@@ -1,8 +1,8 @@
 import {
-  InputTextModal,
-  InputPasswordModal,
+  InputTextEditModal,
+  InputPasswordEditModal,
   InputNumberEditModal,
-  InputTextareaModal,
+  InputTextareaEditModal,
   SelectEditModal,
   DatePickerEditModal,
   TimePickerEditModal,
@@ -32,10 +32,10 @@ import {
 import { InputType } from "./getInputType";
 
 export const modalMap: Record<InputType, React.ComponentType<any> | null> = {
-  text: InputTextModal,
-  password: InputPasswordModal,
+  text: InputTextEditModal,
+  password: InputPasswordEditModal,
   inputnumber: InputNumberEditModal,
-  textarea: InputTextareaModal,
+  textarea: InputTextareaEditModal,
   select: SelectEditModal,
   datepicker: DatePickerEditModal,
   timepicker: TimePickerEditModal,

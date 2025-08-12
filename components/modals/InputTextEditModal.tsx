@@ -8,7 +8,7 @@ import { useInputValidation } from "@/hooks/useInputValidation";
 const { Option } = Select;
 const { Panel } = Collapse;
 
-interface InputTextModalProps {
+interface InputTextEditModalProps {
   open: boolean;
   codeBlock: string;
   onCancel: () => void;
@@ -16,17 +16,18 @@ interface InputTextModalProps {
   onChangeCode?: (newCode: string) => void;
 }
 
-export default function InputTextModal({
+export default function InputTextEditModal({
   open,
   codeBlock,
   onCancel,
   onSave,
-}: InputTextModalProps) {
+}: InputTextEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
   const [label, setLabel] = useState("");
   const [name, setName] = useState("");
   const [placeholder, setPlaceholder] = useState("");
+  const [minLength, setMinLength] = useState<number | undefined>(undefined);
   const [maxLength, setMaxLength] = useState<number | undefined>(undefined);
   const [allowClear, setAllowClear] = useState(false);
   const [showCount, setShowCount] = useState(false);
@@ -51,6 +52,7 @@ export default function InputTextModal({
       new RegExp(`\\b${attr}\\b`).test(codeBlock);
 
     const maxLengthMatch = codeBlock.match(/maxLength={(\d+)}/);
+    const minLengthMatch = codeBlock.match(/minLength={(\d+)}/);
     const sizeMatch = codeBlock.match(/size="(large|middle|small)"/);
     const statusMatch = codeBlock.match(/status="(error|warning)"/);
 
@@ -63,6 +65,7 @@ export default function InputTextModal({
     setSuffix(matchAttr("suffix"));
     setInputId(matchAttr("id"));
     setMaxLength(maxLengthMatch ? parseInt(maxLengthMatch[1]) : undefined);
+    setMinLength(minLengthMatch ? parseInt(minLengthMatch[1]) : undefined);
 
     setAllowClear(matchBool("allowClear"));
     setShowCount(matchBool("showCount"));
@@ -83,34 +86,57 @@ export default function InputTextModal({
     );
   }, [codeBlock]);
 
-  const buildInputCode = () => {
-    const inputProps: string[] = [];
-
-    if (placeholder) inputProps.push(`placeholder="${placeholder}"`);
-    if (maxLength !== undefined) inputProps.push(`maxLength={${maxLength}}`);
-    if (disabled) inputProps.push(`disabled`);
-    if (readOnly) inputProps.push(`readOnly`);
-    if (autoFocus) inputProps.push(`autoFocus`);
-    if (antdVersion !== "v3" && allowClear) inputProps.push(`allowClear`);
-    if (antdVersion !== "v3" && showCount) inputProps.push(`showCount`);
-    if (antdVersion !== "v3" && status) inputProps.push(`status="${status}"`);
-    if (size && size !== "middle") inputProps.push(`size="${size}"`);
-    if (addonBefore) inputProps.push(`addonBefore="${addonBefore}"`);
-    if (addonAfter) inputProps.push(`addonAfter="${addonAfter}"`);
-    if (prefix) inputProps.push(`prefix="${prefix}"`);
-    if (suffix) inputProps.push(`suffix="${suffix}"`);
-    if (inputId) inputProps.push(`id="${inputId}"`);
-
-    return `<Form.Item label="${label}" name="${name}">
-  <Input ${inputProps.join(" ")} />
-</Form.Item>`;
-  };
-
-  const { errorLabel, errorName, validateAndSave } = useInputValidation({
+  // Importá también los errores de addons y id del hook
+  const {
+    errorLabel,
+    errorName,
+    errorMinLength,
+    errorMaxLength,
+    errorAddonBefore,
+    errorAddonAfter,
+    errorPrefix,
+    errorSuffix,
+    errorId,
+    errorSize,
+    errorStatus,
+    validateAndSave,
+  } = useInputValidation({
     label,
     name,
+    placeholder,
+    minLength,
+    maxLength,
+    addonBefore,
+    addonAfter,
+    prefix,
+    suffix,
+    id: inputId,
+    size,
+    status,
     onSave,
-    buildCode: buildInputCode,
+    buildCode: () => {
+      const inputProps: string[] = [];
+
+      if (placeholder) inputProps.push(`placeholder="${placeholder}"`);
+      if (minLength !== undefined) inputProps.push(`minLength={${minLength}}`);
+      if (maxLength !== undefined) inputProps.push(`maxLength={${maxLength}}`);
+      if (disabled) inputProps.push(`disabled`);
+      if (readOnly) inputProps.push(`readOnly`);
+      if (autoFocus) inputProps.push(`autoFocus`);
+      if (antdVersion !== "v3" && allowClear) inputProps.push(`allowClear`);
+      if (antdVersion !== "v3" && showCount) inputProps.push(`showCount`);
+      if (antdVersion !== "v3" && status) inputProps.push(`status="${status}"`);
+      if (size && size !== "middle") inputProps.push(`size="${size}"`);
+      if (addonBefore) inputProps.push(`addonBefore="${addonBefore}"`);
+      if (addonAfter) inputProps.push(`addonAfter="${addonAfter}"`);
+      if (prefix) inputProps.push(`prefix="${prefix}"`);
+      if (suffix) inputProps.push(`suffix="${suffix}"`);
+      if (inputId) inputProps.push(`id="${inputId}"`);
+
+      return `<Form.Item label="${label}" name="${name}">
+  <Input ${inputProps.join(" ")} />
+</Form.Item>`;
+    },
   });
 
   return (
@@ -148,11 +174,30 @@ export default function InputTextModal({
         />
         <Input
           type="number"
-          value={maxLength}
-          onChange={(e) => setMaxLength(Number(e.target.value) || undefined)}
+          value={minLength !== undefined ? minLength : ""}
+          onChange={(e) =>
+            setMinLength(
+              e.target.value === "" ? undefined : Number(e.target.value)
+            )
+          }
+          placeholder="Min Length"
+          addonBefore="minLength"
+          status={errorMinLength ? "error" : undefined}
+        />
+        {errorMinLength && <div className="text-red-500">{errorMinLength}</div>}
+        <Input
+          type="number"
+          value={maxLength !== undefined ? maxLength : ""}
+          onChange={(e) =>
+            setMaxLength(
+              e.target.value === "" ? undefined : Number(e.target.value)
+            )
+          }
           placeholder="Max Length"
           addonBefore="maxLength"
+          status={errorMaxLength ? "error" : undefined}
         />
+        {errorMaxLength && <div className="text-red-500">{errorMaxLength}</div>}
 
         <Checkbox
           checked={readOnly}
@@ -183,35 +228,53 @@ export default function InputTextModal({
               placeholder="Valor de addonBefore"
               addonBefore="addonBefore"
               className="mb-2"
+              status={errorAddonBefore ? "error" : undefined}
             />
+            {errorAddonBefore && (
+              <div className="text-red-500">{errorAddonBefore}</div>
+            )}
+
             <Input
               value={addonAfter}
               onChange={(e) => setAddonAfter(e.target.value)}
               placeholder="Valor de addonAfter"
               addonBefore="addonAfter"
               className="mb-2"
+              status={errorAddonAfter ? "error" : undefined}
             />
+            {errorAddonAfter && (
+              <div className="text-red-500">{errorAddonAfter}</div>
+            )}
+
             <Input
               value={prefix}
               onChange={(e) => setPrefix(e.target.value)}
               placeholder="Prefijo"
               addonBefore="prefix"
               className="mb-2"
+              status={errorPrefix ? "error" : undefined}
             />
+            {errorPrefix && <div className="text-red-500">{errorPrefix}</div>}
+
             <Input
               value={suffix}
               onChange={(e) => setSuffix(e.target.value)}
               placeholder="Sufijo"
               addonBefore="suffix"
               className="mb-2"
+              status={errorSuffix ? "error" : undefined}
             />
+            {errorSuffix && <div className="text-red-500">{errorSuffix}</div>}
+
             <Input
               value={inputId}
               onChange={(e) => setInputId(e.target.value)}
               placeholder="ID del input"
               addonBefore="id"
               className="mb-2"
+              status={errorId ? "error" : undefined}
             />
+            {errorId && <div className="text-red-500">{errorId}</div>}
 
             <Checkbox
               checked={allowClear}
@@ -233,11 +296,17 @@ export default function InputTextModal({
 
             <div className="mb-2">
               <label className="block mb-1">Tamaño (size)</label>
-              <Select value={size} onChange={setSize} style={{ width: "100%" }}>
+              <Select
+                value={size}
+                onChange={setSize}
+                style={{ width: "100%" }}
+                status={errorSize ? "error" : undefined}
+              >
                 <Option value="small">small</Option>
                 <Option value="middle">middle</Option>
                 <Option value="large">large</Option>
               </Select>
+              {errorSize && <div className="text-red-500">{errorSize}</div>}
             </div>
 
             {antdVersion !== "v3" && (
@@ -247,11 +316,15 @@ export default function InputTextModal({
                   value={status}
                   onChange={setStatus}
                   style={{ width: "100%" }}
+                  status={errorStatus ? "error" : undefined}
                 >
                   <Option value="">none</Option>
                   <Option value="error">error</Option>
                   <Option value="warning">warning</Option>
                 </Select>
+                {errorStatus && (
+                  <div className="text-red-500">{errorStatus}</div>
+                )}
               </div>
             )}
           </Panel>

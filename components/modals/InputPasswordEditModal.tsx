@@ -7,19 +7,19 @@ import { useAntdVersion } from "@/context/AntdVersionContext";
 const { Option } = Select;
 const { Panel } = Collapse;
 
-interface InputPasswordModalProps {
+interface InputPasswordEditModalProps {
   open: boolean;
   codeBlock: string;
   onCancel: () => void;
   onSave: (updatedCode: string) => void;
 }
 
-export default function InputPasswordModal({
+export default function InputPasswordEditModal({
   open,
   codeBlock,
   onCancel,
   onSave,
-}: InputPasswordModalProps) {
+}: InputPasswordEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
   const [label, setLabel] = useState("");

@@ -1,6 +1,6 @@
-export { default as InputTextModal } from "./InputTextModal";
-export { default as InputPasswordModal } from "./InputPasswordModal";
-export { default as InputTextareaModal } from "./InputTextareaModal";
+export { default as InputTextEditModal } from "./InputTextEditModal";
+export { default as InputPasswordEditModal } from "./InputPasswordEditModal";
+export { default as InputTextareaEditModal } from "./InputTextareaEditModal";
 export { default as SelectEditModal } from "./SelectEditModal";
 export { default as DatePickerEditModal } from "./DatePickerEditModal";
 export { default as InputNumberEditModal } from "./InputNumberEditModal";

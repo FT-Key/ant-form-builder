@@ -7,19 +7,19 @@ import { useAntdVersion } from "@/context/AntdVersionContext";
 const { Option } = Select;
 const { Panel } = Collapse;
 
-interface TextAreaEditModalProps {
+interface TextAreaEditEditModalProps {
   open: boolean;
   codeBlock: string;
   onCancel: () => void;
   onSave: (updatedCode: string) => void;
 }
 
-export default function TextAreaEditModal({
+export default function TextAreaEditEditModal({
   open,
   codeBlock,
   onCancel,
   onSave,
-}: TextAreaEditModalProps) {
+}: TextAreaEditEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
   const [label, setLabel] = useState("");
