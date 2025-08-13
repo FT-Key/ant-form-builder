@@ -19,6 +19,7 @@ export default function SubmitEditModal({
   onCancel,
   onSave,
 }: SubmitEditModalProps) {
+  const [formItemName, setFormItemName] = useState("");
   const [label, setLabel] = useState("Enviar");
   const [type, setType] = useState<
     "default" | "primary" | "dashed" | "text" | "link"
@@ -35,9 +36,18 @@ export default function SubmitEditModal({
       codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] || "";
     const getBool = (attr: string) => codeBlock.includes(`${attr}`);
 
-    setLabel(codeBlock.match(/>([^<]+)<\/Button>/)?.[1] || "Enviar");
+    // Obtener el name del Form.Item
+    setFormItemName(getAttr("name"));
+
+    // Texto del botón
+    setLabel(
+      codeBlock.match(/<Button[^>]*>([^<]+)<\/Button>/)?.[1] || "Enviar"
+    );
+
+    // id
     setInputId(getAttr("id"));
 
+    // type
     const typeMatch = getAttr("type");
     setType(
       ["primary", "dashed", "text", "link"].includes(typeMatch)
@@ -45,6 +55,7 @@ export default function SubmitEditModal({
         : "default"
     );
 
+    // size
     const sizeMatch = getAttr("size");
     setSize(
       ["small", "large"].includes(sizeMatch) ? (sizeMatch as any) : "middle"
@@ -67,7 +78,10 @@ export default function SubmitEditModal({
     if (disabled) props.push("disabled");
     if (inputId) props.push(`id="${inputId}"`);
 
-    return `<Button ${props.join(" ")}>${label}</Button>`;
+    // Mantener Form.Item con su name original
+    return `<Form.Item name="${formItemName}"><Button ${props.join(
+      " "
+    )}>${label}</Button></Form.Item>`;
   };
 
   return (

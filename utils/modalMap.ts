@@ -34,6 +34,7 @@ import {
 import { InputType } from "./getInputType";
 
 export const modalMap: Record<InputType, React.ComponentType<any> | null> = {
+  submit: SubmitEditModal,
   text: InputTextEditModal,
   password: InputPasswordEditModal,
   inputnumber: InputNumberEditModal,
@@ -55,7 +56,6 @@ export const modalMap: Record<InputType, React.ComponentType<any> | null> = {
   autocomplete: AutoCompleteEditModal,
   transfer: TransferEditModal,
   search: SearchEditModal,
-  submit: SubmitEditModal,
   steps: StepsEditModal,
   colorpicker: ColorPickerEditModal,
   tour: TourEditModal,

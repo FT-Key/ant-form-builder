@@ -5,6 +5,10 @@ export type FormComponent = {
 
 export const v3: FormComponent[] = [
   {
+    label: "Submit",
+    code: `<Form.Item><Button type="primary" htmlType="submit">Submit</Button></Form.Item>`,
+  },
+  {
     label: "Text Input",
     code: `<Form.Item label="Text" name="text"><Input placeholder="Enter text" /></Form.Item>`,
   },
@@ -106,10 +110,6 @@ export const v3: FormComponent[] = [
   {
     label: "Search",
     code: `<Form.Item label="Search" name="search"><Input.Search placeholder="Search..." /></Form.Item>`,
-  },
-  {
-    label: "Submit",
-    code: `<Form.Item><Button type="primary" htmlType="submit">Submit</Button></Form.Item>`,
   },
 ];
 

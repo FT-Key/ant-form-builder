@@ -1,5 +1,21 @@
 // utils/validators.ts
 
+export function validateClassName(value: string) {
+  if (!value.trim()) {
+    return { valid: true }; // opcional
+  }
+  const classNames = value.split(/\s+/);
+  for (const cls of classNames) {
+    if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(cls)) {
+      return {
+        valid: false,
+        error: `La clase "${cls}" no es válida. Debe comenzar con letra/guion bajo y solo contener letras, números, guiones o guion bajo`,
+      };
+    }
+  }
+  return { valid: true };
+}
+
 function containsInvalidJSXChars(value: string): boolean {
   return /[<>{}]/.test(value);
 }
@@ -199,6 +215,45 @@ export function validateStatus(status?: string) {
       error: `status debe ser uno de: ${validStatuses
         .map((v) => (v === "" ? "none" : v))
         .join(", ")}`,
+    };
+  }
+  return { valid: true };
+}
+
+// Button
+
+export function validateButtonType(value?: string) {
+  const validTypes = ["default", "primary", "dashed", "text", "link"];
+  if (!value || value.trim() === "") return { valid: true };
+  if (!validTypes.includes(value)) {
+    return {
+      valid: false,
+      error: `El tipo de botón debe ser uno de: ${validTypes.join(", ")}`,
+    };
+  }
+  return { valid: true };
+}
+
+export function validateButtonLabel(value: string) {
+  if (!value.trim()) {
+    return { valid: false, error: "El texto del botón no puede estar vacío" };
+  }
+  if (/[<>{}]/.test(value)) {
+    return {
+      valid: false,
+      error: "El texto del botón no puede contener <, >, {, }",
+    };
+  }
+  return { valid: true };
+}
+
+export function validateButtonSize(value?: string) {
+  const validSizes = ["small", "middle", "large"];
+  if (!value || value.trim() === "") return { valid: true };
+  if (!validSizes.includes(value)) {
+    return {
+      valid: false,
+      error: `El tamaño del botón debe ser uno de: ${validSizes.join(", ")}`,
     };
   }
   return { valid: true };

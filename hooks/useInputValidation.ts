@@ -12,11 +12,15 @@ import {
   validateId,
   validateSize,
   validateStatus,
+  validateClassName,
+  validateButtonType,
+  validateButtonLabel,
+  validateButtonSize,
 } from "@/utils/validators";
 
 interface ValidationParams {
-  label: string;
-  name: string;
+  label?: string;
+  name?: string;
   placeholder?: string;
   minLength?: number | string;
   maxLength?: number | string;
@@ -29,14 +33,18 @@ interface ValidationParams {
   id?: string;
   size?: string;
   status?: string;
+  className?: string;
+  buttonType?: string;
+  buttonLabel?: string;
+  buttonSize?: string;
   onSave: (code: string) => void;
   buildCode: () => string;
 }
 
 export function useInputValidation(params: ValidationParams) {
   const {
-    label,
-    name,
+    label = "",
+    name = "",
     placeholder,
     minLength,
     maxLength,
@@ -49,10 +57,15 @@ export function useInputValidation(params: ValidationParams) {
     id,
     size,
     status,
+    className,
+    buttonType,
+    buttonLabel = "",
+    buttonSize,
     onSave,
     buildCode,
   } = params;
 
+  // Estados de error
   const [errorLabel, setErrorLabel] = useState("");
   const [errorName, setErrorName] = useState("");
   const [errorPlaceholder, setErrorPlaceholder] = useState("");
@@ -67,8 +80,13 @@ export function useInputValidation(params: ValidationParams) {
   const [errorId, setErrorId] = useState("");
   const [errorSize, setErrorSize] = useState("");
   const [errorStatus, setErrorStatus] = useState("");
+  const [errorClassName, setErrorClassName] = useState("");
+  const [errorButtonType, setErrorButtonType] = useState("");
+  const [errorButtonLabel, setErrorButtonLabel] = useState("");
+  const [errorButtonSize, setErrorButtonSize] = useState("");
 
-  const validateAndSave = () => {
+  const validateAndSave = (): void => {
+    // Validaciones comunes
     const labelValidation = validateLabel(label);
     const nameValidation = validateName(name);
     const placeholderValidation = validatePlaceholder(placeholder || "");
@@ -87,7 +105,20 @@ export function useInputValidation(params: ValidationParams) {
     const statusValidation = status
       ? validateStatus(status)
       : { valid: true, error: "" };
+    const classNameValidation = className
+      ? validateClassName(className)
+      : { valid: true, error: "" };
 
+    // Validaciones específicas de botón
+    const buttonTypeValidation = buttonType
+      ? validateButtonType(buttonType)
+      : { valid: true, error: "" };
+    const buttonLabelValidation = validateButtonLabel(buttonLabel);
+    const buttonSizeValidation = buttonSize
+      ? validateButtonSize(buttonSize)
+      : { valid: true, error: "" };
+
+    // Set de errores
     setErrorLabel(labelValidation.error || "");
     setErrorName(nameValidation.error || "");
     setErrorPlaceholder(placeholderValidation.error || "");
@@ -102,8 +133,12 @@ export function useInputValidation(params: ValidationParams) {
     setErrorId(idValidation.error || "");
     setErrorSize(sizeValidation.error || "");
     setErrorStatus(statusValidation.error || "");
+    setErrorClassName(classNameValidation.error || "");
+    setErrorButtonType(buttonTypeValidation.error || "");
+    setErrorButtonLabel(buttonLabelValidation.error || "");
+    setErrorButtonSize(buttonSizeValidation.error || "");
 
-    // Validación lógica adicional: minLength ≤ maxLength, min ≤ max
+    // Validaciones cruzadas
     if (
       minLength !== undefined &&
       maxLength !== undefined &&
@@ -119,6 +154,7 @@ export function useInputValidation(params: ValidationParams) {
       return;
     }
 
+    // Si algo no es válido, no guardamos
     if (
       !labelValidation.valid ||
       !nameValidation.valid ||
@@ -133,15 +169,21 @@ export function useInputValidation(params: ValidationParams) {
       !suffixValidation.valid ||
       !idValidation.valid ||
       !sizeValidation.valid ||
-      !statusValidation.valid
+      !statusValidation.valid ||
+      !classNameValidation.valid ||
+      !buttonTypeValidation.valid ||
+      !buttonLabelValidation.valid ||
+      !buttonSizeValidation.valid
     ) {
       return;
     }
 
+    // Guardamos si todo pasa
     onSave(buildCode());
   };
 
   return {
+    // Errores
     errorLabel,
     errorName,
     errorPlaceholder,
@@ -156,7 +198,13 @@ export function useInputValidation(params: ValidationParams) {
     errorId,
     errorSize,
     errorStatus,
+    errorClassName,
+    errorButtonType,
+    errorButtonLabel,
+    errorButtonSize,
+    // Acción principal
     validateAndSave,
+    // Setters manuales
     setErrorLabel,
     setErrorName,
     setErrorPlaceholder,
@@ -171,5 +219,9 @@ export function useInputValidation(params: ValidationParams) {
     setErrorId,
     setErrorSize,
     setErrorStatus,
+    setErrorClassName,
+    setErrorButtonType,
+    setErrorButtonLabel,
+    setErrorButtonSize,
   };
 }

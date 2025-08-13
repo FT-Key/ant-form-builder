@@ -38,7 +38,7 @@ export default function InputList({
     openEditor,
     closeEditor,
     saveEditor,
-    updateLocalCodeBlock, // <-- agregamos esta función del hook
+    updateLocalCodeBlock,
   } = useInputEditorLogic(inputs, getCodeBlockByInputId, onUpdateInput);
 
   // Mapeamos inputs con código
