@@ -15,17 +15,19 @@ interface State {
 export default class ErrorBoundary extends React.Component<Props, State> {
   state: State = { hasError: false, error: null };
 
-  static getDerivedStateFromError(error: Error) {
+  // Cuando ocurre un error en algún hijo, actualizamos el estado para mostrar UI alternativa
+  static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
   }
 
+  // Aquí podemos hacer logging o enviar error a un servicio externo
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("ErrorBoundary atrapó un error:", error);
     this.props.onError?.(error, info);
   }
 
+  // Limpia el error actual y borra logs guardados en localStorage
   handleReset = () => {
-    // Borra los logs guardados y resetea el estado
     localStorage.removeItem("renderErrors");
     this.setState({ hasError: false, error: null });
   };
@@ -33,14 +35,15 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="bg-red-50 text-red-700 border border-red-200 p-4 rounded">
-          <h2 className="text-lg font-semibold mb-1">
+        <div className="bg-red-50 text-red-700 border border-red-200 p-4 rounded space-y-3">
+          <h2 className="text-lg font-semibold">
             ⚠ Error al renderizar el formulario
           </h2>
-          <p className="mb-3">{this.state.error?.message}</p>
+          <p>{this.state.error?.message}</p>
           <button
             className="text-sm text-blue-600 hover:underline"
             onClick={this.handleReset}
+            type="button"
           >
             Limpiar errores e intentar nuevamente
           </button>
@@ -48,6 +51,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
+    // Renderizamos los hijos normalmente si no hay error
     return this.props.children;
   }
 }

@@ -101,6 +101,18 @@ export default function PreviewArea({
             <h3 className="text-sm font-medium text-red-500 mb-2">
               Logs de errores recientes (últimos {logs.length})
             </h3>
+
+            <button
+              type="button"
+              className="text-sm text-blue-600 hover:underline mb-3"
+              onClick={() => {
+                localStorage.removeItem("renderErrors");
+                setLogs([]);
+              }}
+            >
+              Limpiar errores guardados
+            </button>
+
             <ul className="space-y-2 max-h-48 overflow-y-auto text-xs text-gray-700 bg-gray-100 p-3 rounded border border-gray-200">
               {logs.map((log, idx) => (
                 <li key={idx} className="border-b border-gray-300 pb-2">

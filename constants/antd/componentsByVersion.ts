@@ -121,7 +121,7 @@ export const v4: FormComponent[] = [
   },
   {
     label: "Form Item",
-    code: `<Form.Item label="Generic" name="generic"><Input placeholder="Enter value" /></Form.Item>`,
+    code: `<Form.Item label="Generic" name="generic"></Form.Item>`,
   },
   {
     label: "Input Group",

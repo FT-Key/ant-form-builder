@@ -1,4 +1,5 @@
 import {
+  SubmitEditModal,
   InputTextEditModal,
   InputPasswordEditModal,
   InputNumberEditModal,
@@ -22,11 +23,12 @@ import {
   StepsEditModal,
   ColorPickerEditModal,
   SearchEditModal,
-  SubmitEditModal,
   TourEditModal,
   SegmentedEditModal,
   FloatButtonEditModal,
   WatermarkEditModal,
+  QREditModal,
+  ImagePreviewGroupEditModal,
 } from "@/components/modals";
 
 import { InputType } from "./getInputType";
@@ -60,5 +62,13 @@ export const modalMap: Record<InputType, React.ComponentType<any> | null> = {
   segmented: SegmentedEditModal,
   floatbutton: FloatButtonEditModal,
   watermark: WatermarkEditModal,
+  qr: QREditModal,
+  imagepreviewgroup: ImagePreviewGroupEditModal,
+
+  // Nuevos tipos que no tienen modal específico aún
+  formitem: null,
+  formgroup: null,
+  descriptions: null,
+
   other: null,
 };
