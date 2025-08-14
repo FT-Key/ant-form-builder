@@ -1,10 +1,20 @@
 "use client";
 
-import { Modal, Input, Select, Checkbox, Collapse, Divider } from "antd";
+import {
+  Modal,
+  Input,
+  Select,
+  Checkbox,
+  Collapse,
+  Divider,
+  Typography,
+} from "antd";
 import { useEffect, useState } from "react";
+import { useInputValidation } from "@/hooks/useInputValidation";
 
 const { Panel } = Collapse;
 const { Option } = Select;
+const { Text } = Typography;
 
 interface SubmitEditModalProps {
   open: boolean;
@@ -36,18 +46,12 @@ export default function SubmitEditModal({
       codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] || "";
     const getBool = (attr: string) => codeBlock.includes(`${attr}`);
 
-    // Obtener el name del Form.Item
     setFormItemName(getAttr("name"));
-
-    // Texto del botón
     setLabel(
       codeBlock.match(/<Button[^>]*>([^<]+)<\/Button>/)?.[1] || "Enviar"
     );
-
-    // id
     setInputId(getAttr("id"));
 
-    // type
     const typeMatch = getAttr("type");
     setType(
       ["primary", "dashed", "text", "link"].includes(typeMatch)
@@ -55,7 +59,6 @@ export default function SubmitEditModal({
         : "default"
     );
 
-    // size
     const sizeMatch = getAttr("size");
     setSize(
       ["small", "large"].includes(sizeMatch) ? (sizeMatch as any) : "middle"
@@ -67,21 +70,34 @@ export default function SubmitEditModal({
     setDisabled(getBool("disabled"));
   }, [codeBlock]);
 
-  const buildCode = () => {
-    const props = [`htmlType="submit"`];
+  // Hook: solo recibe onSave y buildCode
+  const {
+    errorButtonLabel,
+    errorId,
+    errorButtonType,
+    errorButtonSize,
+    validateAndSave: originalValidateAndSave,
+  } = useInputValidation({
+    onSave,
+    buildCode: () => {
+      const props = [`htmlType="submit"`];
+      if (type !== "default") props.push(`type="${type}"`);
+      if (size !== "middle") props.push(`size="${size}"`);
+      if (block) props.push("block");
+      if (danger) props.push("danger");
+      if (loading) props.push("loading");
+      if (disabled) props.push("disabled");
+      if (inputId) props.push(`id="${inputId}"`);
 
-    if (type !== "default") props.push(`type="${type}"`);
-    if (size !== "middle") props.push(`size="${size}"`);
-    if (block) props.push("block");
-    if (danger) props.push("danger");
-    if (loading) props.push("loading");
-    if (disabled) props.push("disabled");
-    if (inputId) props.push(`id="${inputId}"`);
+      return `<Form.Item name="${formItemName}"><Button ${props.join(
+        " "
+      )}>${label}</Button></Form.Item>`;
+    },
+  });
 
-    // Mantener Form.Item con su name original
-    return `<Form.Item name="${formItemName}"><Button ${props.join(
-      " "
-    )}>${label}</Button></Form.Item>`;
+  // Nuevo validateAndSave que llama al hook con valores actuales
+  const validateAndSave = () => {
+    originalValidateAndSave();
   };
 
   return (
@@ -89,28 +105,35 @@ export default function SubmitEditModal({
       open={open}
       title="Editar Botón de Envío"
       onCancel={onCancel}
-      onOk={() => onSave(buildCode())}
+      onOk={validateAndSave} // ✅ ahora siempre toma valores actuales
       okText="Guardar"
       cancelText="Cancelar"
     >
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          addonBefore="Texto del botón"
-        />
+        <div>
+          <Input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            addonBefore="Texto del botón"
+          />
+          {errorButtonLabel && <Text type="danger">{errorButtonLabel}</Text>}
+        </div>
 
         <Divider />
 
         <Collapse ghost>
           <Panel header="Opciones avanzadas" key="1">
-            <Input
-              value={inputId}
-              onChange={(e) => setInputId(e.target.value)}
-              addonBefore="id"
-              className="mb-2"
-            />
+            <div>
+              <Input
+                value={inputId}
+                onChange={(e) => setInputId(e.target.value)}
+                addonBefore="id"
+                className="mb-2"
+              />
+              {errorId && <Text type="danger">{errorId}</Text>}
+            </div>
+
             <Checkbox
               checked={block}
               onChange={(e) => setBlock(e.target.checked)}
@@ -145,6 +168,7 @@ export default function SubmitEditModal({
                 <Option value="text">text</Option>
                 <Option value="link">link</Option>
               </Select>
+              {errorButtonType && <Text type="danger">{errorButtonType}</Text>}
             </div>
 
             <div>
@@ -154,6 +178,7 @@ export default function SubmitEditModal({
                 <Option value="middle">middle</Option>
                 <Option value="large">large</Option>
               </Select>
+              {errorButtonSize && <Text type="danger">{errorButtonSize}</Text>}
             </div>
           </Panel>
         </Collapse>

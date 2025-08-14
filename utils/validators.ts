@@ -16,11 +16,23 @@ export function validateClassName(value: string) {
   return { valid: true };
 }
 
+// Valida checkbox (boolean)
+export function validateCheckbox(value: unknown) {
+  if (typeof value !== "boolean") {
+    return {
+      valid: false,
+      error: "El valor del checkbox debe ser verdadero o falso",
+    };
+  }
+  return { valid: true };
+}
+
 function containsInvalidJSXChars(value: string): boolean {
   return /[<>{}]/.test(value);
 }
 
 export function validateLabel(label: string) {
+  console.log("Label: ", label)
   if (!label.trim()) {
     return { valid: false, error: "El label no puede estar vacío" };
   }

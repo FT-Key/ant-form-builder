@@ -13,7 +13,6 @@ interface InputTextEditModalProps {
   codeBlock: string;
   onCancel: () => void;
   onSave: (updatedCode: string) => void;
-  onChangeCode?: (newCode: string) => void;
 }
 
 export default function InputTextEditModal({
@@ -43,11 +42,8 @@ export default function InputTextEditModal({
   const [inputId, setInputId] = useState("");
 
   useEffect(() => {
-    const matchAttr = (attr: string) => {
-      const match = codeBlock.match(new RegExp(`${attr}="([^"]+)"`));
-      return match?.[1] || "";
-    };
-
+    const matchAttr = (attr: string) =>
+      codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] || "";
     const matchBool = (attr: string) =>
       new RegExp(`\\b${attr}\\b`).test(codeBlock);
 
@@ -55,9 +51,11 @@ export default function InputTextEditModal({
     const minLengthMatch = codeBlock.match(/minLength={(\d+)}/);
     const sizeMatch = codeBlock.match(/size="(large|middle|small)"/);
     const statusMatch = codeBlock.match(/status="(error|warning)"/);
+    const labelMatch = codeBlock.match(/<Form.Item[^>]*label="([^"]+)"/);
+    const nameMatch = codeBlock.match(/name="([^"]+)"/);
 
-    setLabel(matchAttr("label"));
-    setName(matchAttr("name"));
+    setLabel(labelMatch?.[1] || "");
+    setName(nameMatch?.[1] || "");
     setPlaceholder(matchAttr("placeholder"));
     setAddonBefore(matchAttr("addonBefore"));
     setAddonAfter(matchAttr("addonAfter"));
@@ -73,20 +71,21 @@ export default function InputTextEditModal({
     setReadOnly(matchBool("readOnly"));
     setAutoFocus(matchBool("autoFocus"));
 
-    const sizeValue = sizeMatch?.[1];
     setSize(
-      sizeValue === "small" || sizeValue === "middle" || sizeValue === "large"
-        ? sizeValue
+      sizeMatch?.[1] === "small" ||
+        sizeMatch?.[1] === "middle" ||
+        sizeMatch?.[1] === "large"
+        ? sizeMatch[1]
         : "middle"
     );
 
-    const statusValue = statusMatch?.[1];
     setStatus(
-      statusValue === "error" || statusValue === "warning" ? statusValue : ""
+      statusMatch?.[1] === "error" || statusMatch?.[1] === "warning"
+        ? statusMatch[1]
+        : ""
     );
   }, [codeBlock]);
 
-  // Importá también los errores de addons y id del hook
   const {
     errorLabel,
     errorName,
@@ -99,7 +98,7 @@ export default function InputTextEditModal({
     errorId,
     errorSize,
     errorStatus,
-    validateAndSave,
+    validateAndSave: hookValidateAndSave,
   } = useInputValidation({
     label,
     name,
@@ -115,29 +114,33 @@ export default function InputTextEditModal({
     status,
     onSave,
     buildCode: () => {
-      const inputProps: string[] = [];
+      const props: string[] = [];
 
-      if (placeholder) inputProps.push(`placeholder="${placeholder}"`);
-      if (minLength !== undefined) inputProps.push(`minLength={${minLength}}`);
-      if (maxLength !== undefined) inputProps.push(`maxLength={${maxLength}}`);
-      if (disabled) inputProps.push(`disabled`);
-      if (readOnly) inputProps.push(`readOnly`);
-      if (autoFocus) inputProps.push(`autoFocus`);
-      if (antdVersion !== "v3" && allowClear) inputProps.push(`allowClear`);
-      if (antdVersion !== "v3" && showCount) inputProps.push(`showCount`);
-      if (antdVersion !== "v3" && status) inputProps.push(`status="${status}"`);
-      if (size && size !== "middle") inputProps.push(`size="${size}"`);
-      if (addonBefore) inputProps.push(`addonBefore="${addonBefore}"`);
-      if (addonAfter) inputProps.push(`addonAfter="${addonAfter}"`);
-      if (prefix) inputProps.push(`prefix="${prefix}"`);
-      if (suffix) inputProps.push(`suffix="${suffix}"`);
-      if (inputId) inputProps.push(`id="${inputId}"`);
+      if (placeholder) props.push(`placeholder="${placeholder}"`);
+      if (minLength !== undefined) props.push(`minLength={${minLength}}`);
+      if (maxLength !== undefined) props.push(`maxLength={${maxLength}}`);
+      if (disabled) props.push("disabled");
+      if (readOnly) props.push("readOnly");
+      if (autoFocus) props.push("autoFocus");
+      if (antdVersion !== "v3" && allowClear) props.push("allowClear");
+      if (antdVersion !== "v3" && showCount) props.push("showCount");
+      if (antdVersion !== "v3" && status) props.push(`status="${status}"`);
+      if (size && size !== "middle") props.push(`size="${size}"`);
+      if (addonBefore) props.push(`addonBefore="${addonBefore}"`);
+      if (addonAfter) props.push(`addonAfter="${addonAfter}"`);
+      if (prefix) props.push(`prefix="${prefix}"`);
+      if (suffix) props.push(`suffix="${suffix}"`);
+      if (inputId) props.push(`id="${inputId}"`);
 
-      return `<Form.Item label="${label}" name="${name}">
-  <Input ${inputProps.join(" ")} />
-</Form.Item>`;
+      return `<Form.Item label="${label}" name="${name}"><Input ${props.join(
+        " "
+      )} /></Form.Item>`;
     },
   });
+
+  const validateAndSave = () => {
+    hookValidateAndSave(); // ahora toma los valores actuales
+  };
 
   return (
     <Modal
@@ -150,6 +153,7 @@ export default function InputTextEditModal({
     >
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
+
         <Input
           value={label}
           onChange={(e) => setLabel(e.target.value)}
@@ -158,6 +162,7 @@ export default function InputTextEditModal({
           status={errorLabel ? "error" : undefined}
         />
         {errorLabel && <div className="text-red-500">{errorLabel}</div>}
+
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -166,12 +171,14 @@ export default function InputTextEditModal({
           status={errorName ? "error" : undefined}
         />
         {errorName && <div className="text-red-500">{errorName}</div>}
+
         <Input
           value={placeholder}
           onChange={(e) => setPlaceholder(e.target.value)}
           placeholder="Placeholder"
           addonBefore="placeholder"
         />
+
         <Input
           type="number"
           value={minLength !== undefined ? minLength : ""}
@@ -185,6 +192,7 @@ export default function InputTextEditModal({
           status={errorMinLength ? "error" : undefined}
         />
         {errorMinLength && <div className="text-red-500">{errorMinLength}</div>}
+
         <Input
           type="number"
           value={maxLength !== undefined ? maxLength : ""}

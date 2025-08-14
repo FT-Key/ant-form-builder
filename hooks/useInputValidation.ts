@@ -18,38 +18,40 @@ import {
   validateButtonSize,
 } from "@/utils/validators";
 
-interface ValidationParams {
+export interface ValidationParams {
+  onSave: (code: string) => void;
+  buildCode: () => string;
+
+  // Campos opcionales: el modal decide cuáles enviar
   label?: string;
   name?: string;
   placeholder?: string;
-  minLength?: number | string;
-  maxLength?: number | string;
-  min?: number | string;
-  max?: number | string;
+  minLength?: number;
+  maxLength?: number;
   addonBefore?: string;
   addonAfter?: string;
   prefix?: string;
   suffix?: string;
   id?: string;
-  size?: string;
-  status?: string;
+  size?: "small" | "middle" | "large";
+  status?: "" | "error" | "warning";
   className?: string;
-  buttonType?: string;
-  buttonLabel?: string;
-  buttonSize?: string;
-  onSave: (code: string) => void;
-  buildCode: () => string;
+  type?: "default" | "primary" | "dashed" | "text" | "link";
+  block?: boolean;
+  danger?: boolean;
+  loading?: boolean;
+  disabled?: boolean;
 }
 
 export function useInputValidation(params: ValidationParams) {
   const {
-    label = "",
-    name = "",
+    onSave,
+    buildCode,
+    label,
+    name,
     placeholder,
     minLength,
     maxLength,
-    min,
-    max,
     addonBefore,
     addonAfter,
     prefix,
@@ -58,14 +60,10 @@ export function useInputValidation(params: ValidationParams) {
     size,
     status,
     className,
-    buttonType,
-    buttonLabel = "",
-    buttonSize,
-    onSave,
-    buildCode,
+    type,
   } = params;
 
-  // Estados de error
+  // Estado de errores
   const [errorLabel, setErrorLabel] = useState("");
   const [errorName, setErrorName] = useState("");
   const [errorPlaceholder, setErrorPlaceholder] = useState("");
@@ -85,105 +83,113 @@ export function useInputValidation(params: ValidationParams) {
   const [errorButtonLabel, setErrorButtonLabel] = useState("");
   const [errorButtonSize, setErrorButtonSize] = useState("");
 
-  const validateAndSave = (): void => {
-    // Validaciones comunes
-    const labelValidation = validateLabel(label);
-    const nameValidation = validateName(name);
-    const placeholderValidation = validatePlaceholder(placeholder || "");
-    const minLengthValidation = validateMinLength(minLength);
-    const maxLengthValidation = validateMaxLength(maxLength);
-    const minValidation = validateMin(min);
-    const maxValidation = validateMax(max);
-    const addonBeforeValidation = validateAddonValue(addonBefore || "");
-    const addonAfterValidation = validateAddonValue(addonAfter || "");
-    const prefixValidation = validateAddonValue(prefix || "");
-    const suffixValidation = validateAddonValue(suffix || "");
-    const idValidation = id ? validateId(id) : { valid: true, error: "" };
-    const sizeValidation = size
-      ? validateSize(size)
-      : { valid: true, error: "" };
-    const statusValidation = status
-      ? validateStatus(status)
-      : { valid: true, error: "" };
-    const classNameValidation = className
-      ? validateClassName(className)
-      : { valid: true, error: "" };
+  const validateAndSave = () => {
+    let hasError = false;
+    const code = buildCode();
 
-    // Validaciones específicas de botón
-    const buttonTypeValidation = buttonType
-      ? validateButtonType(buttonType)
-      : { valid: true, error: "" };
-    const buttonLabelValidation = validateButtonLabel(buttonLabel);
-    const buttonSizeValidation = buttonSize
-      ? validateButtonSize(buttonSize)
-      : { valid: true, error: "" };
-
-    // Set de errores
-    setErrorLabel(labelValidation.error || "");
-    setErrorName(nameValidation.error || "");
-    setErrorPlaceholder(placeholderValidation.error || "");
-    setErrorMinLength(minLengthValidation.error || "");
-    setErrorMaxLength(maxLengthValidation.error || "");
-    setErrorMin(minValidation.error || "");
-    setErrorMax(maxValidation.error || "");
-    setErrorAddonBefore(addonBeforeValidation.error || "");
-    setErrorAddonAfter(addonAfterValidation.error || "");
-    setErrorPrefix(prefixValidation.error || "");
-    setErrorSuffix(suffixValidation.error || "");
-    setErrorId(idValidation.error || "");
-    setErrorSize(sizeValidation.error || "");
-    setErrorStatus(statusValidation.error || "");
-    setErrorClassName(classNameValidation.error || "");
-    setErrorButtonType(buttonTypeValidation.error || "");
-    setErrorButtonLabel(buttonLabelValidation.error || "");
-    setErrorButtonSize(buttonSizeValidation.error || "");
-
-    // Validaciones cruzadas
-    if (
-      minLength !== undefined &&
-      maxLength !== undefined &&
-      Number(minLength) > Number(maxLength)
-    ) {
-      setErrorMinLength("minLength no puede ser mayor que maxLength");
-      setErrorMaxLength("maxLength no puede ser menor que minLength");
-      return;
-    }
-    if (min !== undefined && max !== undefined && Number(min) > Number(max)) {
-      setErrorMin("min no puede ser mayor que max");
-      setErrorMax("max no puede ser menor que min");
-      return;
+    // Validar solo los campos que existan
+    if (label !== undefined) {
+      const res = validateLabel(label);
+      setErrorLabel(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
     }
 
-    // Si algo no es válido, no guardamos
-    if (
-      !labelValidation.valid ||
-      !nameValidation.valid ||
-      !placeholderValidation.valid ||
-      !minLengthValidation.valid ||
-      !maxLengthValidation.valid ||
-      !minValidation.valid ||
-      !maxValidation.valid ||
-      !addonBeforeValidation.valid ||
-      !addonAfterValidation.valid ||
-      !prefixValidation.valid ||
-      !suffixValidation.valid ||
-      !idValidation.valid ||
-      !sizeValidation.valid ||
-      !statusValidation.valid ||
-      !classNameValidation.valid ||
-      !buttonTypeValidation.valid ||
-      !buttonLabelValidation.valid ||
-      !buttonSizeValidation.valid
-    ) {
-      return;
+    if (name !== undefined) {
+      const res = validateName(name);
+      setErrorName(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
     }
 
-    // Guardamos si todo pasa
-    onSave(buildCode());
+    if (placeholder !== undefined) {
+      const res = validatePlaceholder(placeholder);
+      setErrorPlaceholder(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (minLength !== undefined) {
+      const res = validateMinLength(minLength);
+      setErrorMinLength(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (maxLength !== undefined) {
+      const res = validateMaxLength(maxLength);
+      setErrorMaxLength(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (addonBefore !== undefined) {
+      const res = validateAddonValue(addonBefore);
+      setErrorAddonBefore(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (addonAfter !== undefined) {
+      const res = validateAddonValue(addonAfter);
+      setErrorAddonAfter(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (prefix !== undefined) {
+      const res = validateAddonValue(prefix);
+      setErrorPrefix(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (suffix !== undefined) {
+      const res = validateAddonValue(suffix);
+      setErrorSuffix(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (id !== undefined) {
+      const res = validateId(id);
+      setErrorId(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (size !== undefined) {
+      const res = validateSize(size);
+      setErrorSize(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (status !== undefined) {
+      const res = validateStatus(status);
+      setErrorStatus(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (className !== undefined) {
+      const res = validateClassName(className);
+      setErrorClassName(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (type !== undefined) {
+      const res = validateButtonType(type);
+      setErrorButtonType(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (label !== undefined && type !== undefined) {
+      const res = validateButtonLabel(label);
+      setErrorButtonLabel(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (size !== undefined && type !== undefined) {
+      const res = validateButtonSize(size);
+      setErrorButtonSize(res.valid ? "" : res.error || "");
+      if (!res.valid) hasError = true;
+    }
+
+    if (!hasError) {
+      onSave(code);
+    }
   };
 
   return {
-    // Errores
     errorLabel,
     errorName,
     errorPlaceholder,
@@ -202,9 +208,8 @@ export function useInputValidation(params: ValidationParams) {
     errorButtonType,
     errorButtonLabel,
     errorButtonSize,
-    // Acción principal
     validateAndSave,
-    // Setters manuales
+    // Setters manuales si algún modal los necesita
     setErrorLabel,
     setErrorName,
     setErrorPlaceholder,

@@ -6,8 +6,8 @@ import { modalMap } from "@/utils/modalMap";
 interface ModalRendererProps {
   editingInputId: string | null;
   codeBlock: string;
-  onCancel: () => void;
-  onSave: (...args: any[]) => void;
+  onCancel: () => void; // debe cerrar el modal (p.ej. setEditingInputId(null))
+  onSave: (updatedCode?: any) => void; // actualiza el código en el padre
   onChangeCode: (newCodeBlock: string) => void;
 }
 
@@ -18,14 +18,11 @@ export default function ModalRenderer({
   onSave,
   onChangeCode,
 }: ModalRendererProps) {
-
-  if (!editingInputId) {
-    return null;
-  }
+  if (!editingInputId) return null;
 
   const inputType = getInputType(codeBlock);
-
   const ModalComponent = modalMap[inputType];
+
   if (!ModalComponent) {
     console.warn(
       "[ModalRenderer] No ModalComponent encontrado para inputType:",
@@ -34,7 +31,7 @@ export default function ModalRenderer({
     return null;
   }
 
-  // simple wrappers that only add logging, then call the original callbacks
+  // Envoltorios con logs
   const handleCancel = () => {
     try {
       onCancel();
@@ -43,11 +40,15 @@ export default function ModalRenderer({
     }
   };
 
-  const handleSave = (updatedCode?: any) => {
+  // ⭐ Guardar y luego cerrar (opción 2 centralizada)
+  const handleSave = async (updatedCode?: any) => {
     try {
-      (onSave as any)(updatedCode);
+      await Promise.resolve(onSave(updatedCode)); // por si onSave es async
+      onCancel(); // cerrar después de guardar OK
     } catch (e) {
       console.error("[ModalRenderer] error calling onSave:", e);
+      // Si prefieres cerrar aun con error, mueve onCancel() a un finally
+      // finally { onCancel(); }
     }
   };
 
@@ -64,7 +65,7 @@ export default function ModalRenderer({
       open={true}
       codeBlock={codeBlock}
       onCancel={handleCancel}
-      onSave={handleSave}
+      onSave={handleSave} // ← los modales sólo llaman onSave(...)
       onChangeCode={handleChangeCode}
     />
   );
