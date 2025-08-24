@@ -1,3 +1,4 @@
+// SubmitEditModal.tsx
 "use client";
 
 import {
@@ -41,6 +42,9 @@ export default function SubmitEditModal({
   const [size, setSize] = useState<"small" | "middle" | "large">("middle");
   const [inputId, setInputId] = useState("");
 
+  const [activePanels, setActivePanels] = useState<string[]>([]);
+
+  // Parsear atributos del codeBlock al abrir el modal
   useEffect(() => {
     const getAttr = (attr: string) =>
       codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] || "";
@@ -70,14 +74,17 @@ export default function SubmitEditModal({
     setDisabled(getBool("disabled"));
   }, [codeBlock]);
 
-  // Hook: solo recibe onSave y buildCode
-  const {
-    errorButtonLabel,
-    errorId,
-    errorButtonType,
-    errorButtonSize,
-    validateAndSave: originalValidateAndSave,
-  } = useInputValidation({
+  // Hook de validación
+  const { errors, validateAndSave: hookValidateAndSave } = useInputValidation({
+    label,
+    name: formItemName,
+    type,
+    block,
+    danger,
+    loading,
+    disabled,
+    size,
+    id: inputId,
     onSave,
     buildCode: () => {
       const props = [`htmlType="submit"`];
@@ -95,17 +102,24 @@ export default function SubmitEditModal({
     },
   });
 
-  // Nuevo validateAndSave que llama al hook con valores actuales
-  const validateAndSave = () => {
-    originalValidateAndSave();
-  };
+  // Abrir panel automáticamente si hay errores
+  useEffect(() => {
+    const advancedErrors = ["errorId", "errorButtonType", "errorButtonSize"];
+    const basicErrors = ["errorButtonLabel"];
+    const newActivePanels: string[] = [];
+
+    if (advancedErrors.some((key) => errors[key])) newActivePanels.push("1"); // panel avanzado
+    if (basicErrors.some((key) => errors[key])) newActivePanels.push("0"); // panel básico si existiera
+
+    setActivePanels(newActivePanels);
+  }, [errors]);
 
   return (
     <Modal
       open={open}
       title="Editar Botón de Envío"
       onCancel={onCancel}
-      onOk={validateAndSave} // ✅ ahora siempre toma valores actuales
+      onOk={hookValidateAndSave}
       okText="Guardar"
       cancelText="Cancelar"
     >
@@ -116,13 +130,20 @@ export default function SubmitEditModal({
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             addonBefore="Texto del botón"
+            status={errors.errorButtonLabel ? "error" : undefined}
           />
-          {errorButtonLabel && <Text type="danger">{errorButtonLabel}</Text>}
+          {errors.errorButtonLabel && (
+            <Text type="danger">{errors.errorButtonLabel}</Text>
+          )}
         </div>
 
         <Divider />
 
-        <Collapse ghost>
+        <Collapse
+          ghost
+          activeKey={activePanels}
+          onChange={(keys) => setActivePanels(keys as string[])}
+        >
           <Panel header="Opciones avanzadas" key="1">
             <div>
               <Input
@@ -130,8 +151,9 @@ export default function SubmitEditModal({
                 onChange={(e) => setInputId(e.target.value)}
                 addonBefore="id"
                 className="mb-2"
+                status={errors.errorId ? "error" : undefined}
               />
-              {errorId && <Text type="danger">{errorId}</Text>}
+              {errors.errorId && <Text type="danger">{errors.errorId}</Text>}
             </div>
 
             <Checkbox
@@ -168,7 +190,9 @@ export default function SubmitEditModal({
                 <Option value="text">text</Option>
                 <Option value="link">link</Option>
               </Select>
-              {errorButtonType && <Text type="danger">{errorButtonType}</Text>}
+              {errors.errorButtonType && (
+                <Text type="danger">{errors.errorButtonType}</Text>
+              )}
             </div>
 
             <div>
@@ -178,7 +202,9 @@ export default function SubmitEditModal({
                 <Option value="middle">middle</Option>
                 <Option value="large">large</Option>
               </Select>
-              {errorButtonSize && <Text type="danger">{errorButtonSize}</Text>}
+              {errors.errorButtonSize && (
+                <Text type="danger">{errors.errorButtonSize}</Text>
+              )}
             </div>
           </Panel>
         </Collapse>

@@ -53,11 +53,8 @@ export default function Home() {
             showCode={logic.showCode}
             setShowCode={logic.setShowCode}
             code={logic.code}
-            copyToClipboard={async (text) => {
-              await navigator.clipboard.writeText(text);
-              alert("Código copiado!");
-            }}
-            downloadImage={logic.handleDownloadImage}
+            previewRef={logic.previewRef}
+            activeVersionId={logic.activeVersionId}
           />
         </div>
         <div className="px-4 md:px-6">

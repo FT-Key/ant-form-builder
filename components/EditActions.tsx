@@ -14,7 +14,7 @@ export default function EditActions({
   onClear,
   isPreviewExpanded,
   setIsPreviewExpanded,
-  isPreviewVisible, // 👈 NUEVO
+  isPreviewVisible,
 }: {
   hasUnsavedChanges: boolean;
   onSave: () => void;
@@ -22,7 +22,7 @@ export default function EditActions({
   onClear: () => void;
   isPreviewExpanded: boolean;
   setIsPreviewExpanded: (value: boolean) => void;
-  isPreviewVisible: boolean; // 👈 NUEVO
+  isPreviewVisible: boolean;
 }) {
   const showConfirmClear = () => {
     Modal.confirm({
@@ -60,13 +60,9 @@ export default function EditActions({
         </div>
 
         <div className="flex gap-2">
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={showConfirmClear} // Aquí cambio la llamada para pedir confirmación
-          />
+          <Button danger icon={<DeleteOutlined />} onClick={showConfirmClear} />
 
-          {isPreviewVisible && ( // 👈 SOLO si está visible el preview
+          {isPreviewVisible && (
             <Button
               type="default"
               icon={

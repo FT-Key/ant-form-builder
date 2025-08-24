@@ -41,6 +41,8 @@ export default function InputTextEditModal({
   const [suffix, setSuffix] = useState("");
   const [inputId, setInputId] = useState("");
 
+  const [activePanels, setActivePanels] = useState<string[]>([]);
+
   useEffect(() => {
     const matchAttr = (attr: string) =>
       codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] || "";
@@ -86,20 +88,8 @@ export default function InputTextEditModal({
     );
   }, [codeBlock]);
 
-  const {
-    errorLabel,
-    errorName,
-    errorMinLength,
-    errorMaxLength,
-    errorAddonBefore,
-    errorAddonAfter,
-    errorPrefix,
-    errorSuffix,
-    errorId,
-    errorSize,
-    errorStatus,
-    validateAndSave: hookValidateAndSave,
-  } = useInputValidation({
+  // Hook de validación
+  const { errors, validateAndSave: hookValidateAndSave } = useInputValidation({
     label,
     name,
     placeholder,
@@ -138,16 +128,45 @@ export default function InputTextEditModal({
     },
   });
 
-  const validateAndSave = () => {
-    hookValidateAndSave(); // ahora toma los valores actuales
-  };
+  useEffect(() => {
+    const advancedErrors = [
+      "errorAddonBefore",
+      "errorAddonAfter",
+      "errorPrefix",
+      "errorSuffix",
+      "errorId",
+      "errorSize",
+      "errorStatus",
+    ];
+
+    const basicErrors = [
+      "errorLabel",
+      "errorName",
+      "errorPlaceholder",
+      "errorMinLength",
+      "errorMaxLength",
+      "errorDisabled",
+    ];
+
+    const newActivePanels: string[] = [];
+
+    if (basicErrors.some((key) => errors[key])) {
+      newActivePanels.push("0"); // panel básico (si existiera en un Collapse)
+    }
+
+    if (advancedErrors.some((key) => errors[key])) {
+      newActivePanels.push("1"); // panel avanzado
+    }
+
+    setActivePanels(newActivePanels);
+  }, [errors]);
 
   return (
     <Modal
       open={open}
       title="Editar Input Text"
       onCancel={onCancel}
-      onOk={validateAndSave}
+      onOk={hookValidateAndSave}
       okText="Guardar"
       cancelText="Cancelar"
     >
@@ -159,18 +178,22 @@ export default function InputTextEditModal({
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Etiqueta"
           addonBefore="label"
-          status={errorLabel ? "error" : undefined}
+          status={errors["errorLabel"] ? "error" : undefined}
         />
-        {errorLabel && <div className="text-red-500">{errorLabel}</div>}
+        {errors["errorLabel"] && (
+          <div className="text-red-500">{errors["errorLabel"]}</div>
+        )}
 
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nombre (name)"
           addonBefore="name"
-          status={errorName ? "error" : undefined}
+          status={errors["errorName"] ? "error" : undefined}
         />
-        {errorName && <div className="text-red-500">{errorName}</div>}
+        {errors["errorName"] && (
+          <div className="text-red-500">{errors["errorName"]}</div>
+        )}
 
         <Input
           value={placeholder}
@@ -189,9 +212,11 @@ export default function InputTextEditModal({
           }
           placeholder="Min Length"
           addonBefore="minLength"
-          status={errorMinLength ? "error" : undefined}
+          status={errors["errorMinLength"] ? "error" : undefined}
         />
-        {errorMinLength && <div className="text-red-500">{errorMinLength}</div>}
+        {errors["errorMinLength"] && (
+          <div className="text-red-500">{errors["errorMinLength"]}</div>
+        )}
 
         <Input
           type="number"
@@ -203,9 +228,11 @@ export default function InputTextEditModal({
           }
           placeholder="Max Length"
           addonBefore="maxLength"
-          status={errorMaxLength ? "error" : undefined}
+          status={errors["errorMaxLength"] ? "error" : undefined}
         />
-        {errorMaxLength && <div className="text-red-500">{errorMaxLength}</div>}
+        {errors["errorMaxLength"] && (
+          <div className="text-red-500">{errors["errorMaxLength"]}</div>
+        )}
 
         <Checkbox
           checked={readOnly}
@@ -228,7 +255,11 @@ export default function InputTextEditModal({
           disabled
         </Checkbox>
 
-        <Collapse ghost>
+        <Collapse
+          ghost
+          activeKey={activePanels}
+          onChange={(keys) => setActivePanels(keys as string[])}
+        >
           <Panel header="Opciones avanzadas" key="1">
             <Input
               value={addonBefore}
@@ -236,10 +267,10 @@ export default function InputTextEditModal({
               placeholder="Valor de addonBefore"
               addonBefore="addonBefore"
               className="mb-2"
-              status={errorAddonBefore ? "error" : undefined}
+              status={errors["errorAddonBefore"] ? "error" : undefined}
             />
-            {errorAddonBefore && (
-              <div className="text-red-500">{errorAddonBefore}</div>
+            {errors["errorAddonBefore"] && (
+              <div className="text-red-500">{errors["errorAddonBefore"]}</div>
             )}
 
             <Input
@@ -248,10 +279,10 @@ export default function InputTextEditModal({
               placeholder="Valor de addonAfter"
               addonBefore="addonAfter"
               className="mb-2"
-              status={errorAddonAfter ? "error" : undefined}
+              status={errors["errorAddonAfter"] ? "error" : undefined}
             />
-            {errorAddonAfter && (
-              <div className="text-red-500">{errorAddonAfter}</div>
+            {errors["errorAddonAfter"] && (
+              <div className="text-red-500">{errors["errorAddonAfter"]}</div>
             )}
 
             <Input
@@ -260,9 +291,11 @@ export default function InputTextEditModal({
               placeholder="Prefijo"
               addonBefore="prefix"
               className="mb-2"
-              status={errorPrefix ? "error" : undefined}
+              status={errors["errorPrefix"] ? "error" : undefined}
             />
-            {errorPrefix && <div className="text-red-500">{errorPrefix}</div>}
+            {errors["errorPrefix"] && (
+              <div className="text-red-500">{errors["errorPrefix"]}</div>
+            )}
 
             <Input
               value={suffix}
@@ -270,9 +303,11 @@ export default function InputTextEditModal({
               placeholder="Sufijo"
               addonBefore="suffix"
               className="mb-2"
-              status={errorSuffix ? "error" : undefined}
+              status={errors["errorSuffix"] ? "error" : undefined}
             />
-            {errorSuffix && <div className="text-red-500">{errorSuffix}</div>}
+            {errors["errorSuffix"] && (
+              <div className="text-red-500">{errors["errorSuffix"]}</div>
+            )}
 
             <Input
               value={inputId}
@@ -280,9 +315,11 @@ export default function InputTextEditModal({
               placeholder="ID del input"
               addonBefore="id"
               className="mb-2"
-              status={errorId ? "error" : undefined}
+              status={errors["errorId"] ? "error" : undefined}
             />
-            {errorId && <div className="text-red-500">{errorId}</div>}
+            {errors["errorId"] && (
+              <div className="text-red-500">{errors["errorId"]}</div>
+            )}
 
             <Checkbox
               checked={allowClear}
@@ -308,13 +345,15 @@ export default function InputTextEditModal({
                 value={size}
                 onChange={setSize}
                 style={{ width: "100%" }}
-                status={errorSize ? "error" : undefined}
+                status={errors["errorSize"] ? "error" : undefined}
               >
                 <Option value="small">small</Option>
                 <Option value="middle">middle</Option>
                 <Option value="large">large</Option>
               </Select>
-              {errorSize && <div className="text-red-500">{errorSize}</div>}
+              {errors["errorSize"] && (
+                <div className="text-red-500">{errors["errorSize"]}</div>
+              )}
             </div>
 
             {antdVersion !== "v3" && (
@@ -324,14 +363,14 @@ export default function InputTextEditModal({
                   value={status}
                   onChange={setStatus}
                   style={{ width: "100%" }}
-                  status={errorStatus ? "error" : undefined}
+                  status={errors["errorStatus"] ? "error" : undefined}
                 >
                   <Option value="">none</Option>
                   <Option value="error">error</Option>
                   <Option value="warning">warning</Option>
                 </Select>
-                {errorStatus && (
-                  <div className="text-red-500">{errorStatus}</div>
+                {errors["errorStatus"] && (
+                  <div className="text-red-500">{errors["errorStatus"]}</div>
                 )}
               </div>
             )}

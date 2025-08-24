@@ -32,7 +32,7 @@ function containsInvalidJSXChars(value: string): boolean {
 }
 
 export function validateLabel(label: string) {
-  console.log("Label: ", label)
+  console.log("Label: ", label);
   if (!label.trim()) {
     return { valid: false, error: "El label no puede estar vacío" };
   }
@@ -185,9 +185,6 @@ export function validateAddonValue(value: string) {
 
 // Valida id, debe ser string no vacío, sin chars JSX inválidos y válido para HTML id
 export function validateId(value: string) {
-  if (!value.trim()) {
-    return { valid: false, error: "El id no puede estar vacío" };
-  }
   if (containsInvalidJSXChars(value)) {
     return {
       valid: false,
@@ -195,7 +192,7 @@ export function validateId(value: string) {
     };
   }
   // Validar que id tenga solo letras, números, guiones, guion bajo y no inicie con número
-  if (!/^[a-zA-Z_][a-zA-Z0-9-_:.]*$/.test(value)) {
+  if (!/^([a-zA-Z_][a-zA-Z0-9-_:.]*)?$/.test(value)) {
     return {
       valid: false,
       error:

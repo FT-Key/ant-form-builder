@@ -1,10 +1,11 @@
 "use client";
 
-import { Form, Button } from "antd";
+import { Form, Button, message } from "antd";
 import ReactJsxParser from "react-jsx-parser";
 import ErrorBoundary from "./ErrorBoundary";
 import { useState } from "react";
-import { ShrinkOutlined } from "@ant-design/icons";
+import { ShrinkOutlined, DownloadOutlined } from "@ant-design/icons";
+import DownloadImageButton from "./DownloadImageButton";
 
 interface ErrorLog {
   message: string;
@@ -18,12 +19,14 @@ export default function PreviewArea({
   previewRef,
   isExpanded,
   setIsExpanded,
+  activeVersionId,
 }: {
   code: string;
   components: any;
-  previewRef: any;
+  previewRef: React.RefObject<HTMLDivElement>;
   isExpanded: boolean;
   setIsExpanded: (value: boolean) => void;
+  activeVersionId?: number | null;
 }) {
   const [logs, setLogs] = useState<ErrorLog[]>(() => {
     try {
@@ -48,6 +51,25 @@ export default function PreviewArea({
     setLogs(updatedLogs);
   };
 
+  const handleDownloadImage = async () => {
+    if (!previewRef.current) return;
+    try {
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(previewRef.current, {
+        cacheBust: true,
+        backgroundColor: "#fff",
+        pixelRatio: 2,
+      });
+      const link = document.createElement("a");
+      link.download = `form-version-${activeVersionId ?? "latest"}.png`;
+      link.href = dataUrl;
+      link.click();
+      message.success("Form exported!");
+    } catch {
+      message.error("Failed to export form.");
+    }
+  };
+
   const wrapperClass = isExpanded
     ? "fixed inset-0 bg-white p-8 overflow-auto z-[100]"
     : "form-capture-area lg:col-span-3 bg-white border border-gray-200 rounded-lg shadow-sm min-h-96 relative";
@@ -59,12 +81,19 @@ export default function PreviewArea({
       style={{ fontFamily: "'Roboto', 'Helvetica Neue', 'Arial', sans-serif" }}
     >
       {isExpanded && (
-        <div className="absolute top-4 right-4 z-[110]">
+        <div className="sticky top-0 bg-white border-b border-gray-200 z-[110] flex justify-between items-center p-4 mb-6 shadow-sm action-bar">
+          <DownloadImageButton
+            nodeRef={previewRef}
+            fileName={`form-version-${activeVersionId ?? "latest"}.png`}
+            excludeClassNames={["action-bar"]} // aquí se excluye el wrapper de botones
+          />
           <Button
             type="default"
             onClick={() => setIsExpanded(false)}
             icon={<ShrinkOutlined />}
-          />
+          >
+            Exit Fullscreen
+          </Button>
         </div>
       )}
 
@@ -99,7 +128,7 @@ export default function PreviewArea({
         {logs.length > 0 && (
           <div className="mt-6">
             <h3 className="text-sm font-medium text-red-500 mb-2">
-              Logs de errores recientes (últimos {logs.length})
+              Recent render errors (last {logs.length})
             </h3>
 
             <button
@@ -110,7 +139,7 @@ export default function PreviewArea({
                 setLogs([]);
               }}
             >
-              Limpiar errores guardados
+              Clear saved errors
             </button>
 
             <ul className="space-y-2 max-h-48 overflow-y-auto text-xs text-gray-700 bg-gray-100 p-3 rounded border border-gray-200">
