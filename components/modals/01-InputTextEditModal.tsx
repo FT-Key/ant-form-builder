@@ -1,11 +1,13 @@
-"use client";
-
-import { Modal, Input, Checkbox, Select, Divider, Collapse } from "antd";
-import { useEffect, useState } from "react";
-import { useAntdVersion } from "@/context/AntdVersionContext";
+import { Modal, Checkbox, Divider, Collapse } from "antd";
 import { useInputValidation } from "@/hooks/useInputValidation";
+import { buildInputCode } from "@/utils/modals/buildInputCode";
+import { useAntdVersion } from "@/context/AntdVersionContext";
+import { useCollapsePanels } from "@/hooks/modals/useCollapsePanels";
+import { useEffect, useState } from "react";
+import { BasicFields } from "@/components/modals/BasicFields";
+import { AdvancedFields } from "@/components/modals/AdvancedFields";
+import { BaseInputFields } from "@/types/BaseInputFields";
 
-const { Option } = Select;
 const { Panel } = Collapse;
 
 interface InputTextEditModalProps {
@@ -23,113 +25,38 @@ export default function InputTextEditModal({
 }: InputTextEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
-  const [label, setLabel] = useState("");
-  const [name, setName] = useState("");
-  const [placeholder, setPlaceholder] = useState("");
-  const [minLength, setMinLength] = useState<number | undefined>(undefined);
-  const [maxLength, setMaxLength] = useState<number | undefined>(undefined);
-  const [allowClear, setAllowClear] = useState(false);
-  const [showCount, setShowCount] = useState(false);
-  const [disabled, setDisabled] = useState(false);
-  const [readOnly, setReadOnly] = useState(false);
-  const [autoFocus, setAutoFocus] = useState(false);
-  const [status, setStatus] = useState<"error" | "warning" | "">("");
-  const [size, setSize] = useState<"large" | "middle" | "small">("middle");
-  const [addonBefore, setAddonBefore] = useState("");
-  const [addonAfter, setAddonAfter] = useState("");
-  const [prefix, setPrefix] = useState("");
-  const [suffix, setSuffix] = useState("");
-  const [inputId, setInputId] = useState("");
-
-  const [activePanels, setActivePanels] = useState<string[]>([]);
-
-  useEffect(() => {
-    const matchAttr = (attr: string) =>
-      codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] || "";
-    const matchBool = (attr: string) =>
-      new RegExp(`\\b${attr}\\b`).test(codeBlock);
-
-    const maxLengthMatch = codeBlock.match(/maxLength={(\d+)}/);
-    const minLengthMatch = codeBlock.match(/minLength={(\d+)}/);
-    const sizeMatch = codeBlock.match(/size="(large|middle|small)"/);
-    const statusMatch = codeBlock.match(/status="(error|warning)"/);
-    const labelMatch = codeBlock.match(/<Form.Item[^>]*label="([^"]+)"/);
-    const nameMatch = codeBlock.match(/name="([^"]+)"/);
-
-    setLabel(labelMatch?.[1] || "");
-    setName(nameMatch?.[1] || "");
-    setPlaceholder(matchAttr("placeholder"));
-    setAddonBefore(matchAttr("addonBefore"));
-    setAddonAfter(matchAttr("addonAfter"));
-    setPrefix(matchAttr("prefix"));
-    setSuffix(matchAttr("suffix"));
-    setInputId(matchAttr("id"));
-    setMaxLength(maxLengthMatch ? parseInt(maxLengthMatch[1]) : undefined);
-    setMinLength(minLengthMatch ? parseInt(minLengthMatch[1]) : undefined);
-
-    setAllowClear(matchBool("allowClear"));
-    setShowCount(matchBool("showCount"));
-    setDisabled(matchBool("disabled"));
-    setReadOnly(matchBool("readOnly"));
-    setAutoFocus(matchBool("autoFocus"));
-
-    setSize(
-      sizeMatch?.[1] === "small" ||
-        sizeMatch?.[1] === "middle" ||
-        sizeMatch?.[1] === "large"
-        ? sizeMatch[1]
-        : "middle"
-    );
-
-    setStatus(
-      statusMatch?.[1] === "error" || statusMatch?.[1] === "warning"
-        ? statusMatch[1]
-        : ""
-    );
-  }, [codeBlock]);
-
-  // Hook de validación
-  const { errors, validateAndSave: hookValidateAndSave } = useInputValidation({
-    label,
-    name,
-    placeholder,
-    minLength,
-    maxLength,
-    addonBefore,
-    addonAfter,
-    prefix,
-    suffix,
-    id: inputId,
-    size,
-    status,
-    onSave,
-    buildCode: () => {
-      const props: string[] = [];
-
-      if (placeholder) props.push(`placeholder="${placeholder}"`);
-      if (minLength !== undefined) props.push(`minLength={${minLength}}`);
-      if (maxLength !== undefined) props.push(`maxLength={${maxLength}}`);
-      if (disabled) props.push("disabled");
-      if (readOnly) props.push("readOnly");
-      if (autoFocus) props.push("autoFocus");
-      if (antdVersion !== "v3" && allowClear) props.push("allowClear");
-      if (antdVersion !== "v3" && showCount) props.push("showCount");
-      if (antdVersion !== "v3" && status) props.push(`status="${status}"`);
-      if (size && size !== "middle") props.push(`size="${size}"`);
-      if (addonBefore) props.push(`addonBefore="${addonBefore}"`);
-      if (addonAfter) props.push(`addonAfter="${addonAfter}"`);
-      if (prefix) props.push(`prefix="${prefix}"`);
-      if (suffix) props.push(`suffix="${suffix}"`);
-      if (inputId) props.push(`id="${inputId}"`);
-
-      return `<Form.Item label="${label}" name="${name}"><Input ${props.join(
-        " "
-      )} /></Form.Item>`;
-    },
+  // Estado local editable
+  const [localFields, setLocalFields] = useState<BaseInputFields>({
+    label: "",
+    name: "",
+    placeholder: "",
+    disabled: false,
+    readOnly: false,
+    autoFocus: false,
+    size: "middle",
+    status: "",
+    inputId: "",
+    addonBefore: "",
+    addonAfter: "",
+    prefix: "",
+    suffix: "",
+    className: "",
+    minLength: undefined,
+    maxLength: undefined,
   });
 
-  useEffect(() => {
-    const advancedErrors = [
+  const [allowClear, setAllowClear] = useState(false);
+  const [showCount, setShowCount] = useState(false);
+
+  const { activePanels, setActivePanels } = useCollapsePanels(
+    [
+      "errorLabel",
+      "errorName",
+      "errorPlaceholder",
+      "errorMinLength",
+      "errorMaxLength",
+    ],
+    [
       "errorAddonBefore",
       "errorAddonAfter",
       "errorPrefix",
@@ -137,123 +64,142 @@ export default function InputTextEditModal({
       "errorId",
       "errorSize",
       "errorStatus",
-    ];
+      "errorClassName",
+    ]
+  );
 
-    const basicErrors = [
-      "errorLabel",
-      "errorName",
-      "errorPlaceholder",
-      "errorMinLength",
-      "errorMaxLength",
-      "errorDisabled",
-    ];
+  const { errors, validateAndSave } = useInputValidation({
+    ...localFields,
+    id: localFields.inputId,
+    onSave,
+    buildCode: () =>
+      buildInputCode(localFields, {
+        ...localFields,
+        allowClear,
+        showCount,
+      }),
+  });
 
-    const newActivePanels: string[] = [];
+  // Inicializar campos al abrir modal
+  useEffect(() => {
+    if (!open) return;
 
-    if (basicErrors.some((key) => errors[key])) {
-      newActivePanels.push("0"); // panel básico (si existiera en un Collapse)
+    const matchAttr = (attr: string) =>
+      codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] ||
+      codeBlock.match(new RegExp(`${attr}='([^']+)'`))?.[1] ||
+      "";
+
+    const matchBool = (attr: string) =>
+      new RegExp(`\\b${attr}\\b`).test(codeBlock);
+
+    const matchNumberProp = (attr: string): number | undefined => {
+      const brace = codeBlock.match(new RegExp(`${attr}={(\\d+)}`));
+      if (brace) return Number(brace[1]);
+      const dbl = codeBlock.match(new RegExp(`${attr}="(\\d+)"`));
+      if (dbl) return Number(dbl[1]);
+      const sgl = codeBlock.match(new RegExp(`${attr}='(\\d+)'`));
+      if (sgl) return Number(sgl[1]);
+      return undefined;
+    };
+
+    setLocalFields((prev) => ({
+      ...prev,
+      label: matchAttr("label"),
+      name: matchAttr("name"),
+      placeholder: matchAttr("placeholder"),
+      inputId: matchAttr("id"),
+      minLength: matchNumberProp("minLength"),
+      maxLength: matchNumberProp("maxLength"),
+      addonBefore: matchAttr("addonBefore"),
+      addonAfter: matchAttr("addonAfter"),
+      prefix: matchAttr("prefix"),
+      suffix: matchAttr("suffix"),
+      className: matchAttr("className"),
+      disabled: matchBool("disabled"),
+      readOnly: matchBool("readOnly"),
+      autoFocus: matchBool("autoFocus"),
+      size:
+        codeBlock.match(/size="(large|middle|small)"/)?.[1] === "large"
+          ? "large"
+          : codeBlock.match(/size="(large|middle|small)"/)?.[1] === "small"
+          ? "small"
+          : "middle",
+      status:
+        codeBlock.match(/status="(error|warning)"/)?.[1] === "error"
+          ? "error"
+          : codeBlock.match(/status="(error|warning)"/)?.[1] === "warning"
+          ? "warning"
+          : "",
+    }));
+
+    setAllowClear(matchBool("allowClear"));
+    setShowCount(matchBool("showCount"));
+  }, [open, codeBlock]);
+
+  const handleSave = () => {
+    const currentErrors = validateAndSave();
+
+    const hasAdvancedErrors = [
+      "errorAddonBefore",
+      "errorAddonAfter",
+      "errorPrefix",
+      "errorSuffix",
+      "errorId",
+      "errorSize",
+      "errorStatus",
+      "errorClassName",
+    ].some((key) => currentErrors[key]);
+
+    if (hasAdvancedErrors && !activePanels.includes("1")) {
+      setActivePanels([...activePanels, "1"]);
     }
 
-    if (advancedErrors.some((key) => errors[key])) {
-      newActivePanels.push("1"); // panel avanzado
+    const hasAnyErrors = Object.keys(currentErrors).some(
+      (key) => currentErrors[key]
+    );
+    if (!hasAnyErrors) {
+      onSave(
+        buildInputCode(localFields, {
+          ...localFields,
+          allowClear,
+          showCount,
+        })
+      );
+      return true;
     }
-
-    setActivePanels(newActivePanels);
-  }, [errors]);
+    return false;
+  };
 
   return (
     <Modal
       open={open}
       title="Editar Input Text"
       onCancel={onCancel}
-      onOk={hookValidateAndSave}
+      onOk={handleSave}
       okText="Guardar"
       cancelText="Cancelar"
     >
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
-
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="Etiqueta"
-          addonBefore="label"
-          status={errors["errorLabel"] ? "error" : undefined}
-        />
-        {errors["errorLabel"] && (
-          <div className="text-red-500">{errors["errorLabel"]}</div>
-        )}
-
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre (name)"
-          addonBefore="name"
-          status={errors["errorName"] ? "error" : undefined}
-        />
-        {errors["errorName"] && (
-          <div className="text-red-500">{errors["errorName"]}</div>
-        )}
-
-        <Input
-          value={placeholder}
-          onChange={(e) => setPlaceholder(e.target.value)}
-          placeholder="Placeholder"
-          addonBefore="placeholder"
-        />
-
-        <Input
-          type="number"
-          value={minLength !== undefined ? minLength : ""}
-          onChange={(e) =>
-            setMinLength(
-              e.target.value === "" ? undefined : Number(e.target.value)
-            )
+        <BasicFields
+          fields={localFields}
+          setField={(key, value) =>
+            setLocalFields((prev) => ({ ...prev, [key]: value }))
           }
-          placeholder="Min Length"
-          addonBefore="minLength"
-          status={errors["errorMinLength"] ? "error" : undefined}
+          errors={errors}
+          show={[
+            "label",
+            "name",
+            "placeholder",
+            "disabled",
+            "readOnly",
+            "autoFocus",
+            "size",
+            "status",
+            "minLength",
+            "maxLength",
+          ]}
         />
-        {errors["errorMinLength"] && (
-          <div className="text-red-500">{errors["errorMinLength"]}</div>
-        )}
-
-        <Input
-          type="number"
-          value={maxLength !== undefined ? maxLength : ""}
-          onChange={(e) =>
-            setMaxLength(
-              e.target.value === "" ? undefined : Number(e.target.value)
-            )
-          }
-          placeholder="Max Length"
-          addonBefore="maxLength"
-          status={errors["errorMaxLength"] ? "error" : undefined}
-        />
-        {errors["errorMaxLength"] && (
-          <div className="text-red-500">{errors["errorMaxLength"]}</div>
-        )}
-
-        <Checkbox
-          checked={readOnly}
-          onChange={(e) => setReadOnly(e.target.checked)}
-        >
-          readOnly
-        </Checkbox>
-
-        <Checkbox
-          checked={autoFocus}
-          onChange={(e) => setAutoFocus(e.target.checked)}
-        >
-          autoFocus
-        </Checkbox>
-
-        <Checkbox
-          checked={disabled}
-          onChange={(e) => setDisabled(e.target.checked)}
-        >
-          disabled
-        </Checkbox>
 
         <Collapse
           ghost
@@ -261,65 +207,30 @@ export default function InputTextEditModal({
           onChange={(keys) => setActivePanels(keys as string[])}
         >
           <Panel header="Opciones avanzadas" key="1">
-            <Input
-              value={addonBefore}
-              onChange={(e) => setAddonBefore(e.target.value)}
-              placeholder="Valor de addonBefore"
-              addonBefore="addonBefore"
-              className="mb-2"
-              status={errors["errorAddonBefore"] ? "error" : undefined}
+            <AdvancedFields
+              fields={localFields}
+              setField={(key, value) =>
+                setLocalFields((prev) => ({ ...prev, [key]: value }))
+              }
+              errors={errors}
+              show={[
+                "addonBefore",
+                "addonAfter",
+                "prefix",
+                "suffix",
+                "inputId",
+                "className",
+                "size",
+                "status",
+                "allowClear",
+                "showCount",
+              ]}
+              allowClear={allowClear}
+              showCount={showCount}
+              setAllowClear={setAllowClear}
+              setShowCount={setShowCount}
+              antdVersion={antdVersion}
             />
-            {errors["errorAddonBefore"] && (
-              <div className="text-red-500">{errors["errorAddonBefore"]}</div>
-            )}
-
-            <Input
-              value={addonAfter}
-              onChange={(e) => setAddonAfter(e.target.value)}
-              placeholder="Valor de addonAfter"
-              addonBefore="addonAfter"
-              className="mb-2"
-              status={errors["errorAddonAfter"] ? "error" : undefined}
-            />
-            {errors["errorAddonAfter"] && (
-              <div className="text-red-500">{errors["errorAddonAfter"]}</div>
-            )}
-
-            <Input
-              value={prefix}
-              onChange={(e) => setPrefix(e.target.value)}
-              placeholder="Prefijo"
-              addonBefore="prefix"
-              className="mb-2"
-              status={errors["errorPrefix"] ? "error" : undefined}
-            />
-            {errors["errorPrefix"] && (
-              <div className="text-red-500">{errors["errorPrefix"]}</div>
-            )}
-
-            <Input
-              value={suffix}
-              onChange={(e) => setSuffix(e.target.value)}
-              placeholder="Sufijo"
-              addonBefore="suffix"
-              className="mb-2"
-              status={errors["errorSuffix"] ? "error" : undefined}
-            />
-            {errors["errorSuffix"] && (
-              <div className="text-red-500">{errors["errorSuffix"]}</div>
-            )}
-
-            <Input
-              value={inputId}
-              onChange={(e) => setInputId(e.target.value)}
-              placeholder="ID del input"
-              addonBefore="id"
-              className="mb-2"
-              status={errors["errorId"] ? "error" : undefined}
-            />
-            {errors["errorId"] && (
-              <div className="text-red-500">{errors["errorId"]}</div>
-            )}
 
             <Checkbox
               checked={allowClear}
@@ -338,42 +249,6 @@ export default function InputTextEditModal({
             >
               showCount
             </Checkbox>
-
-            <div className="mb-2">
-              <label className="block mb-1">Tamaño (size)</label>
-              <Select
-                value={size}
-                onChange={setSize}
-                style={{ width: "100%" }}
-                status={errors["errorSize"] ? "error" : undefined}
-              >
-                <Option value="small">small</Option>
-                <Option value="middle">middle</Option>
-                <Option value="large">large</Option>
-              </Select>
-              {errors["errorSize"] && (
-                <div className="text-red-500">{errors["errorSize"]}</div>
-              )}
-            </div>
-
-            {antdVersion !== "v3" && (
-              <div>
-                <label className="block mb-1">Estado</label>
-                <Select
-                  value={status}
-                  onChange={setStatus}
-                  style={{ width: "100%" }}
-                  status={errors["errorStatus"] ? "error" : undefined}
-                >
-                  <Option value="">none</Option>
-                  <Option value="error">error</Option>
-                  <Option value="warning">warning</Option>
-                </Select>
-                {errors["errorStatus"] && (
-                  <div className="text-red-500">{errors["errorStatus"]}</div>
-                )}
-              </div>
-            )}
           </Panel>
         </Collapse>
       </div>

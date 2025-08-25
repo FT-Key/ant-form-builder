@@ -62,113 +62,73 @@ export function useInputValidation(params: ValidationParams) {
     return res.valid;
   };
 
-  const validateAndSave = () => {
+  /**
+   * Ahora devuelve los errores actuales para poder usarlos fuera.
+   */
+  const validateAndSave = (): Record<string, string> => {
     let hasError = false;
+    const newErrors: Record<string, string> = {};
     const code = buildCode();
 
-    if (label !== undefined)
-      hasError =
-        !validateField("errorLabel", label, validators.validateLabel) ||
-        hasError;
-    if (name !== undefined)
-      hasError =
-        !validateField("errorName", name, validators.validateName) || hasError;
-    if (placeholder !== undefined)
-      hasError =
-        !validateField(
-          "errorPlaceholder",
-          placeholder,
-          validators.validatePlaceholder
-        ) || hasError;
-    if (minLength !== undefined)
-      hasError =
-        !validateField(
-          "errorMinLength",
-          minLength,
-          validators.validateMinLength
-        ) || hasError;
-    if (maxLength !== undefined)
-      hasError =
-        !validateField(
-          "errorMaxLength",
-          maxLength,
-          validators.validateMaxLength
-        ) || hasError;
-    if (min !== undefined)
-      hasError =
-        !validateField("errorMin", min, validators.validateMin) || hasError;
-    if (max !== undefined)
-      hasError =
-        !validateField("errorMax", max, validators.validateMax) || hasError;
-    if (addonBefore !== undefined)
-      hasError =
-        !validateField(
-          "errorAddonBefore",
-          addonBefore,
-          validators.validateAddonValue
-        ) || hasError;
-    if (addonAfter !== undefined)
-      hasError =
-        !validateField(
-          "errorAddonAfter",
-          addonAfter,
-          validators.validateAddonValue
-        ) || hasError;
-    if (prefix !== undefined)
-      hasError =
-        !validateField("errorPrefix", prefix, validators.validateAddonValue) ||
-        hasError;
-    if (suffix !== undefined)
-      hasError =
-        !validateField("errorSuffix", suffix, validators.validateAddonValue) ||
-        hasError;
-    if (id !== undefined)
-      hasError =
-        !validateField("errorId", id, validators.validateId) || hasError;
-    if (size !== undefined)
-      hasError =
-        !validateField("errorSize", size, validators.validateSize) || hasError;
-    if (status !== undefined)
-      hasError =
-        !validateField("errorStatus", status, validators.validateStatus) ||
-        hasError;
-    if (className !== undefined)
-      hasError =
-        !validateField(
-          "errorClassName",
-          className,
-          validators.validateClassName
-        ) || hasError;
-    if (type !== undefined)
-      hasError =
-        !validateField(
-          "errorButtonType",
-          type,
-          validators.validateButtonType
-        ) || hasError;
+    const checkField = (field: string, value: any, validator: Function) => {
+      const res = validator(value);
+      newErrors[field] = res.valid ? "" : res.error || "";
+      if (!res.valid) hasError = true;
+    };
 
+    if (label !== undefined)
+      checkField("errorLabel", label, validators.validateLabel);
+    if (name !== undefined)
+      checkField("errorName", name, validators.validateName);
+    if (placeholder !== undefined)
+      checkField(
+        "errorPlaceholder",
+        placeholder,
+        validators.validatePlaceholder
+      );
+    if (minLength !== undefined)
+      checkField("errorMinLength", minLength, validators.validateMinLength);
+    if (maxLength !== undefined)
+      checkField("errorMaxLength", maxLength, validators.validateMaxLength);
+    if (min !== undefined) checkField("errorMin", min, validators.validateMin);
+    if (max !== undefined) checkField("errorMax", max, validators.validateMax);
+    if (addonBefore !== undefined)
+      checkField(
+        "errorAddonBefore",
+        addonBefore,
+        validators.validateAddonValue
+      );
+    if (addonAfter !== undefined)
+      checkField("errorAddonAfter", addonAfter, validators.validateAddonValue);
+    if (prefix !== undefined)
+      checkField("errorPrefix", prefix, validators.validateAddonValue);
+    if (suffix !== undefined)
+      checkField("errorSuffix", suffix, validators.validateAddonValue);
+    if (id !== undefined) checkField("errorId", id, validators.validateId);
+    if (size !== undefined)
+      checkField("errorSize", size, validators.validateSize);
+    if (status !== undefined)
+      checkField("errorStatus", status, validators.validateStatus);
+    if (className !== undefined)
+      checkField("errorClassName", className, validators.validateClassName);
+    if (type !== undefined)
+      checkField("errorButtonType", type, validators.validateButtonType);
     if (label !== undefined && type !== undefined)
-      hasError =
-        !validateField(
-          "errorButtonLabel",
-          label,
-          validators.validateButtonLabel
-        ) || hasError;
+      checkField("errorButtonLabel", label, validators.validateButtonLabel);
     if (size !== undefined && type !== undefined)
-      hasError =
-        !validateField(
-          "errorButtonSize",
-          size,
-          validators.validateButtonSize
-        ) || hasError;
+      checkField("errorButtonSize", size, validators.validateButtonSize);
+
+    setErrors(newErrors);
 
     if (!hasError) {
       onSave(code);
     }
+
+    return newErrors;
   };
 
   return {
-    errors, // ✅ agregamos errors al return
+    errors,
     validateAndSave,
     setErrors,
   };

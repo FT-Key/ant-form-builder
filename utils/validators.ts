@@ -32,7 +32,6 @@ function containsInvalidJSXChars(value: string): boolean {
 }
 
 export function validateLabel(label: string) {
-  console.log("Label: ", label);
   if (!label.trim()) {
     return { valid: false, error: "El label no puede estar vacío" };
   }
