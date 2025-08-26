@@ -106,6 +106,48 @@ export function BasicFields({
         </>
       )}
 
+      {show.includes("min") && (
+        <>
+          <Input
+            type="number"
+            value={fields.min ?? ""}
+            onChange={(e) =>
+              setField(
+                "min",
+                e.target.value === "" ? undefined : Number(e.target.value)
+              )
+            }
+            placeholder="Min"
+            addonBefore="min"
+            status={errors["errorMin"] ? "error" : undefined}
+          />
+          {errors["errorMin"] && (
+            <div className="text-red-500">{errors["errorMin"]}</div>
+          )}
+        </>
+      )}
+
+      {show.includes("max") && (
+        <>
+          <Input
+            type="number"
+            value={fields.max ?? ""}
+            onChange={(e) =>
+              setField(
+                "max",
+                e.target.value === "" ? undefined : Number(e.target.value)
+              )
+            }
+            placeholder="Max"
+            addonBefore="max"
+            status={errors["errorMax"] ? "error" : undefined}
+          />
+          {errors["errorMax"] && (
+            <div className="text-red-500">{errors["errorMax"]}</div>
+          )}
+        </>
+      )}
+
       {show.includes("disabled") && (
         <Checkbox
           checked={fields.disabled}

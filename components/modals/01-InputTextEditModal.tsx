@@ -1,12 +1,14 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Modal, Checkbox, Divider, Collapse } from "antd";
+import { useAntdVersion } from "@/context/AntdVersionContext";
 import { useInputValidation } from "@/hooks/useInputValidation";
 import { buildInputCode } from "@/utils/modals/buildInputCode";
-import { useAntdVersion } from "@/context/AntdVersionContext";
 import { useCollapsePanels } from "@/hooks/modals/useCollapsePanels";
-import { useEffect, useState } from "react";
+import { BaseInputFields } from "@/types/BaseInputFields";
 import { BasicFields } from "@/components/modals/BasicFields";
 import { AdvancedFields } from "@/components/modals/AdvancedFields";
-import { BaseInputFields } from "@/types/BaseInputFields";
 
 const { Panel } = Collapse;
 
@@ -231,24 +233,6 @@ export default function InputTextEditModal({
               setShowCount={setShowCount}
               antdVersion={antdVersion}
             />
-
-            <Checkbox
-              checked={allowClear}
-              disabled={antdVersion === "v3"}
-              onChange={(e) => setAllowClear(e.target.checked)}
-              className="mb-2"
-            >
-              allowClear
-            </Checkbox>
-
-            <Checkbox
-              checked={showCount}
-              disabled={antdVersion === "v3"}
-              onChange={(e) => setShowCount(e.target.checked)}
-              className="mb-2"
-            >
-              showCount
-            </Checkbox>
           </Panel>
         </Collapse>
       </div>

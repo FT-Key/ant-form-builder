@@ -15,6 +15,7 @@ interface AdvancedFieldsProps {
   showCount?: boolean;
   setAllowClear?: (value: boolean) => void;
   setShowCount?: (value: boolean) => void;
+  setVisibilityToggle?: (value: boolean) => void;
   antdVersion?: "v3" | "v4" | "v5";
 }
 
@@ -27,6 +28,7 @@ export function AdvancedFields({
   showCount,
   setAllowClear,
   setShowCount,
+  setVisibilityToggle,
   antdVersion,
 }: AdvancedFieldsProps) {
   return (
@@ -126,8 +128,20 @@ export function AdvancedFields({
         </Checkbox>
       )}
 
+      {setVisibilityToggle &&
+        show.includes("visibilityToggle") &&
+        antdVersion !== "v3" && (
+          <Checkbox
+            checked={fields.visibilityToggle}
+            onChange={(e) => setVisibilityToggle(e.target.checked)}
+          >
+            visibilityToggle
+          </Checkbox>
+        )}
+
       {show.includes("size") && (
         <>
+          <label className="block mb-1">Size</label>
           <Select
             value={fields.size}
             onChange={(value) => setField("size", value)}
@@ -146,6 +160,7 @@ export function AdvancedFields({
 
       {show.includes("status") && antdVersion !== "v3" && (
         <>
+          <label className="block mb-1">Status</label>
           <Select
             value={fields.status}
             onChange={(value) => setField("status", value)}
@@ -175,6 +190,58 @@ export function AdvancedFields({
             <div className="text-red-500">{errors["errorClassName"]}</div>
           )}
         </>
+      )}
+
+      {show.includes("step") && (
+        <>
+          <Input
+            type="number"
+            value={fields.step ?? ""}
+            onChange={(e) =>
+              setField(
+                "step",
+                e.target.value === "" ? undefined : Number(e.target.value)
+              )
+            }
+            placeholder="Step"
+            addonBefore="step"
+          />
+        </>
+      )}
+
+      {show.includes("precision") && (
+        <>
+          <Input
+            type="number"
+            value={fields.precision ?? ""}
+            onChange={(e) =>
+              setField(
+                "precision",
+                e.target.value === "" ? undefined : Number(e.target.value)
+              )
+            }
+            placeholder="Precision"
+            addonBefore="precision"
+          />
+        </>
+      )}
+
+      {show.includes("keyboard") && (
+        <Checkbox
+          checked={fields.keyboard}
+          onChange={(e) => setField("keyboard", e.target.checked)}
+        >
+          keyboard
+        </Checkbox>
+      )}
+
+      {show.includes("controls") && (
+        <Checkbox
+          checked={fields.controls}
+          onChange={(e) => setField("controls", e.target.checked)}
+        >
+          controls
+        </Checkbox>
       )}
     </div>
   );

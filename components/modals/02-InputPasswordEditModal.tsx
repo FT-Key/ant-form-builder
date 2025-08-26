@@ -1,11 +1,15 @@
 "use client";
 
-import { Modal, Input, Checkbox, Select, Divider, Collapse } from "antd";
 import { useEffect, useState } from "react";
+import { Modal, Divider, Collapse } from "antd";
 import { useAntdVersion } from "@/context/AntdVersionContext";
 import { useInputValidation } from "@/hooks/useInputValidation";
+import { buildInputCode } from "@/utils/modals/buildInputCode";
+import { useCollapsePanels } from "@/hooks/modals/useCollapsePanels";
+import { BaseInputFields } from "@/types/BaseInputFields";
+import { BasicFields } from "@/components/modals/BasicFields";
+import { AdvancedFields } from "@/components/modals/AdvancedFields";
 
-const { Option } = Select;
 const { Panel } = Collapse;
 
 interface InputPasswordEditModalProps {
@@ -23,141 +27,169 @@ export default function InputPasswordEditModal({
 }: InputPasswordEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
-  const [label, setLabel] = useState("");
-  const [name, setName] = useState("");
-  const [placeholder, setPlaceholder] = useState("");
-  const [disabled, setDisabled] = useState(false);
+  // Estado local editable
+  const [localFields, setLocalFields] = useState<BaseInputFields>({
+    label: "",
+    name: "",
+    placeholder: "",
+    disabled: false,
+    readOnly: false,
+    autoFocus: false,
+    size: "middle",
+    status: "",
+    inputId: "",
+    prefix: "",
+    suffix: "",
+    className: "",
+    minLength: undefined,
+    maxLength: undefined,
+  });
+
   const [visibilityToggle, setVisibilityToggle] = useState(true);
-  const [status, setStatus] = useState<"error" | "warning" | "">("");
-  const [size, setSize] = useState<"large" | "middle" | "small">("middle");
 
-  const [activePanels, setActivePanels] = useState<string[]>([]);
+  const { activePanels, setActivePanels } = useCollapsePanels(
+    [
+      "errorLabel",
+      "errorName",
+      "errorPlaceholder",
+      "errorMinLength",
+      "errorMaxLength",
+    ],
+    [
+      "errorPrefix",
+      "errorSuffix",
+      "errorId",
+      "errorSize",
+      "errorStatus",
+      "errorClassName",
+    ]
+  );
 
+  // Hook de validación
+  const { errors, validateAndSave } = useInputValidation({
+    ...localFields,
+    id: localFields.inputId,
+    onSave,
+    buildCode: () =>
+      buildInputCode(localFields, { visibilityToggle }, "Input.Password"),
+  });
+
+  // Inicializar campos al abrir modal
   useEffect(() => {
-    const matchAttr = (attr: string) => {
-      const match = codeBlock.match(new RegExp(`${attr}="([^"]+)"`));
-      return match?.[1] || "";
-    };
+    if (!open) return;
+
+    const matchAttr = (attr: string) =>
+      codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] ||
+      codeBlock.match(new RegExp(`${attr}='([^']+)'`))?.[1] ||
+      "";
 
     const matchBool = (attr: string) =>
       new RegExp(`\\b${attr}\\b`).test(codeBlock);
 
-    const sizeMatch = codeBlock.match(/size="(large|middle|small)"/);
-    const statusMatch = codeBlock.match(/status="(error|warning)"/);
+    const matchNumberProp = (attr: string): number | undefined => {
+      const brace = codeBlock.match(new RegExp(`${attr}={(\\d+)}`));
+      if (brace) return Number(brace[1]);
+      const dbl = codeBlock.match(new RegExp(`${attr}="(\\d+)"`));
+      if (dbl) return Number(dbl[1]);
+      const sgl = codeBlock.match(new RegExp(`${attr}='(\\d+)'`));
+      if (sgl) return Number(sgl[1]);
+      return undefined;
+    };
 
-    setLabel(matchAttr("label"));
-    setName(matchAttr("name"));
-    setPlaceholder(matchAttr("placeholder"));
-    setDisabled(matchBool("disabled"));
+    setLocalFields((prev) => ({
+      ...prev,
+      label: matchAttr("label"),
+      name: matchAttr("name"),
+      placeholder: matchAttr("placeholder"),
+      inputId: matchAttr("id"),
+      minLength: matchNumberProp("minLength"),
+      maxLength: matchNumberProp("maxLength"),
+      prefix: matchAttr("prefix"),
+      suffix: matchAttr("suffix"),
+      className: matchAttr("className"),
+      disabled: matchBool("disabled"),
+      readOnly: matchBool("readOnly"),
+      autoFocus: matchBool("autoFocus"),
+      size:
+        codeBlock.match(/size="(large|middle|small)"/)?.[1] === "large"
+          ? "large"
+          : codeBlock.match(/size="(large|middle|small)"/)?.[1] === "small"
+          ? "small"
+          : "middle",
+      status:
+        codeBlock.match(/status="(error|warning)"/)?.[1] === "error"
+          ? "error"
+          : codeBlock.match(/status="(error|warning)"/)?.[1] === "warning"
+          ? "warning"
+          : "",
+    }));
 
-    setVisibilityToggle(() => {
-      if (antdVersion === "v3") return true;
+    if (antdVersion === "v3") {
+      setVisibilityToggle(true);
+    } else {
       const explicitFalse = /visibilityToggle=\{false\}/.test(codeBlock);
-      return !explicitFalse;
-    });
+      setVisibilityToggle(!explicitFalse);
+    }
+  }, [open, codeBlock, antdVersion]);
 
-    const statusValue = statusMatch?.[1];
-    setStatus(
-      statusValue === "error" || statusValue === "warning" ? statusValue : ""
+  const handleSave = () => {
+    const currentErrors = validateAndSave();
+
+    const hasAdvancedErrors = [
+      "errorPrefix",
+      "errorSuffix",
+      "errorId",
+      "errorSize",
+      "errorStatus",
+      "errorClassName",
+    ].some((key) => currentErrors[key]);
+
+    if (hasAdvancedErrors && !activePanels.includes("1")) {
+      setActivePanels([...activePanels, "1"]);
+    }
+
+    const hasAnyErrors = Object.keys(currentErrors).some(
+      (key) => currentErrors[key]
     );
-
-    const sizeValue = sizeMatch?.[1];
-    setSize(
-      sizeValue === "small" || sizeValue === "middle" || sizeValue === "large"
-        ? sizeValue
-        : "middle"
-    );
-  }, [codeBlock, antdVersion]);
-
-  // ✅ Hook de validación
-  const { errors, validateAndSave } = useInputValidation({
-    label,
-    name,
-    placeholder,
-    disabled,
-    size,
-    status,
-    onSave,
-    buildCode: () => {
-      const inputProps: string[] = [];
-
-      if (placeholder) inputProps.push(`placeholder="${placeholder}"`);
-      if (disabled) inputProps.push(`disabled`);
-      if (antdVersion !== "v3" && !visibilityToggle)
-        inputProps.push(`visibilityToggle={false}`);
-      if (antdVersion !== "v3" && status) inputProps.push(`status="${status}"`);
-      if (size && size !== "middle") inputProps.push(`size="${size}"`);
-
-      return `<Form.Item label="${label}" name="${name}">
-  <Input.Password ${inputProps.join(" ")} />
-</Form.Item>`;
-    },
-  });
-
-  // ✅ useEffect para abrir paneles según errores
-  useEffect(() => {
-    const basicErrors = ["errorLabel", "errorName", "errorPlaceholder"];
-    const advancedErrors = ["errorSize", "errorStatus"];
-
-    const newActivePanels: string[] = [];
-
-    if (basicErrors.some((key) => errors[key])) newActivePanels.push("0");
-    if (advancedErrors.some((key) => errors[key])) newActivePanels.push("1");
-
-    setActivePanels(newActivePanels);
-  }, [errors]);
+    if (!hasAnyErrors) {
+      onSave(
+        buildInputCode(localFields, { visibilityToggle }, "Input.Password")
+      );
+      return true;
+    }
+    return false;
+  };
 
   return (
     <Modal
       open={open}
       title="Editar Input Password"
       onCancel={onCancel}
-      onOk={validateAndSave}
+      onOk={handleSave}
       okText="Guardar"
       cancelText="Cancelar"
     >
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
-
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="Etiqueta"
-          addonBefore="label"
-          status={errors["errorLabel"] ? "error" : undefined}
+        <BasicFields
+          fields={localFields}
+          setField={(key, value) =>
+            setLocalFields((prev) => ({ ...prev, [key]: value }))
+          }
+          errors={errors}
+          show={[
+            "label",
+            "name",
+            "placeholder",
+            "disabled",
+            "readOnly",
+            "autoFocus",
+            "size",
+            "status",
+            "minLength",
+            "maxLength",
+          ]}
         />
-        {errors["errorLabel"] && (
-          <div className="text-red-500">{errors["errorLabel"]}</div>
-        )}
-
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre (name)"
-          addonBefore="name"
-          status={errors["errorName"] ? "error" : undefined}
-        />
-        {errors["errorName"] && (
-          <div className="text-red-500">{errors["errorName"]}</div>
-        )}
-
-        <Input
-          value={placeholder}
-          onChange={(e) => setPlaceholder(e.target.value)}
-          placeholder="Placeholder"
-          addonBefore="placeholder"
-          status={errors["errorPlaceholder"] ? "error" : undefined}
-        />
-        {errors["errorPlaceholder"] && (
-          <div className="text-red-500">{errors["errorPlaceholder"]}</div>
-        )}
-
-        <Checkbox
-          checked={disabled}
-          onChange={(e) => setDisabled(e.target.checked)}
-        >
-          disabled
-        </Checkbox>
 
         <Collapse
           ghost
@@ -165,51 +197,24 @@ export default function InputPasswordEditModal({
           onChange={(keys) => setActivePanels(keys as string[])}
         >
           <Panel header="Opciones avanzadas" key="1">
-            {antdVersion !== "v3" && (
-              <Checkbox
-                checked={visibilityToggle}
-                onChange={(e) => setVisibilityToggle(e.target.checked)}
-                className="mb-2"
-              >
-                visibilityToggle
-              </Checkbox>
-            )}
-
-            <div className="mb-2">
-              <label className="block mb-1">Tamaño (size)</label>
-              <Select
-                value={size}
-                onChange={setSize}
-                style={{ width: "100%" }}
-                status={errors["errorSize"] ? "error" : undefined}
-              >
-                <Option value="small">small</Option>
-                <Option value="middle">middle</Option>
-                <Option value="large">large</Option>
-              </Select>
-              {errors["errorSize"] && (
-                <div className="text-red-500">{errors["errorSize"]}</div>
-              )}
-            </div>
-
-            {antdVersion !== "v3" && (
-              <div>
-                <label className="block mb-1">Estado</label>
-                <Select
-                  value={status}
-                  onChange={setStatus}
-                  style={{ width: "100%" }}
-                  status={errors["errorStatus"] ? "error" : undefined}
-                >
-                  <Option value="">none</Option>
-                  <Option value="error">error</Option>
-                  <Option value="warning">warning</Option>
-                </Select>
-                {errors["errorStatus"] && (
-                  <div className="text-red-500">{errors["errorStatus"]}</div>
-                )}
-              </div>
-            )}
+            <AdvancedFields
+              fields={localFields}
+              setField={(key, value) =>
+                setLocalFields((prev) => ({ ...prev, [key]: value }))
+              }
+              errors={errors}
+              show={[
+                "prefix",
+                "suffix",
+                "inputId",
+                "className",
+                "size",
+                "status",
+                "visibilityToggle",
+              ]}
+              antdVersion={antdVersion}
+              setVisibilityToggle={setVisibilityToggle}
+            />
           </Panel>
         </Collapse>
       </div>

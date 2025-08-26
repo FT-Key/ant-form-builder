@@ -191,7 +191,7 @@ export function validateId(value: string) {
     };
   }
   // Validar que id tenga solo letras, números, guiones, guion bajo y no inicie con número
-  if (!/^([a-zA-Z_][a-zA-Z0-9-_:.]*)?$/.test(value)) {
+  if (!/^[a-zA-Z_][a-zA-Z0-9-_:.]*$/.test(value)) {
     return {
       valid: false,
       error:

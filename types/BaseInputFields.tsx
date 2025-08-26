@@ -28,4 +28,15 @@ export interface BaseInputFields {
   // Booleanos adicionales
   allowClear?: boolean;
   showCount?: boolean;
+
+  // Visibilidad
+  visibilityToggle?: boolean;
+
+  // Number
+  min?: number;
+  max?: number;
+  step?: number;
+  precision?: number;
+  keyboard?: boolean;
+  controls?: boolean;
 }
