@@ -1,101 +1,157 @@
 "use client";
 
-import { Modal, Input, Checkbox, Select, Divider, Collapse } from "antd";
 import { useEffect, useState } from "react";
+import { Modal, Divider, Collapse } from "antd";
 import { useAntdVersion } from "@/context/AntdVersionContext";
+import { useInputValidation } from "@/hooks/useInputValidation";
+import { buildInputCode } from "@/utils/modals/buildInputCode";
+import { useCollapsePanels } from "@/hooks/modals/useCollapsePanels";
+import { BaseInputFields } from "@/types/BaseInputFields";
+import { BasicFields } from "@/components/modals/BasicFields";
+import { AdvancedFields } from "@/components/modals/AdvancedFields";
 
-const { Option } = Select;
 const { Panel } = Collapse;
 
-interface TextAreaEditEditModalProps {
+interface TextAreaEditModalProps {
   open: boolean;
   codeBlock: string;
   onCancel: () => void;
   onSave: (updatedCode: string) => void;
 }
 
-export default function TextAreaEditEditModal({
+export default function TextAreaEditModal({
   open,
   codeBlock,
   onCancel,
   onSave,
-}: TextAreaEditEditModalProps) {
+}: TextAreaEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
-  const [label, setLabel] = useState("");
-  const [name, setName] = useState("");
-  const [placeholder, setPlaceholder] = useState("");
-  const [rows, setRows] = useState<number>(4);
-  const [maxLength, setMaxLength] = useState<number | undefined>(undefined);
-  const [autoSize, setAutoSize] = useState(false);
-  const [allowClear, setAllowClear] = useState(false);
-  const [showCount, setShowCount] = useState(false);
-  const [disabled, setDisabled] = useState(false);
-  const [readOnly, setReadOnly] = useState(false);
-  const [autoFocus, setAutoFocus] = useState(false);
-  const [status, setStatus] = useState<"" | "error" | "warning">("");
-  const [size, setSize] = useState<"large" | "middle" | "small">("middle");
-  const [inputId, setInputId] = useState("");
+  // Estado editable
+  const [localFields, setLocalFields] = useState<BaseInputFields>({
+    label: "",
+    name: "",
+    placeholder: "",
+    rows: 4,
+    maxLength: undefined,
+    autoSize: false,
+    allowClear: false,
+    showCount: false,
+    disabled: false,
+    readOnly: false,
+    autoFocus: false,
+    size: "middle",
+    status: "",
+    inputId: "",
+    className: "",
+  });
 
+  const { activePanels, setActivePanels } = useCollapsePanels(
+    // errores básicos
+    [
+      "errorLabel",
+      "errorName",
+      "errorPlaceholder",
+      "errorRows",
+      "errorMaxLength",
+    ],
+    // errores avanzados
+    [
+      "errorAutoSize",
+      "errorAllowClear",
+      "errorShowCount",
+      "errorId",
+      "errorClassName",
+      "errorSize",
+      "errorStatus",
+    ]
+  );
+
+  const { errors, validateAndSave } = useInputValidation({
+    ...localFields,
+    id: localFields.inputId,
+    onSave,
+    buildCode: () => buildInputCode(localFields, {}, "Input.TextArea"),
+  });
+
+  // Inicializar campos al abrir modal
   useEffect(() => {
-    const matchAttr = (attr: string) => {
-      const match = codeBlock.match(new RegExp(`${attr}="([^"]*)"`));
-      return match?.[1] || "";
-    };
+    if (!open) return;
+
+    const matchAttr = (attr: string) =>
+      codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] ||
+      codeBlock.match(new RegExp(`${attr}='([^']+)'`))?.[1] ||
+      "";
 
     const matchBool = (attr: string) =>
       new RegExp(`\\b${attr}\\b`).test(codeBlock);
 
-    const rowsMatch = codeBlock.match(/rows={?(\d+)}?/);
-    const maxLengthMatch = codeBlock.match(/maxLength={?(\d+)}?/);
-    const sizeMatch = codeBlock.match(/size="(large|middle|small)"/);
-    const statusMatch = codeBlock.match(/status="(error|warning)"/);
+    const matchNumberProp = (attr: string): number | undefined => {
+      const brace = codeBlock.match(new RegExp(`${attr}={(\\d+)}`));
+      if (brace) return Number(brace[1]);
+      const dbl = codeBlock.match(new RegExp(`${attr}="(\\d+)"`));
+      if (dbl) return Number(dbl[1]);
+      const sgl = codeBlock.match(new RegExp(`${attr}='(\\d+)'`));
+      if (sgl) return Number(sgl[1]);
+      return undefined;
+    };
 
-    setLabel(matchAttr("label"));
-    setName(matchAttr("name"));
-    setPlaceholder(matchAttr("placeholder"));
-    setInputId(matchAttr("id"));
-    setRows(rowsMatch ? Number(rowsMatch[1]) : 4);
-    setMaxLength(maxLengthMatch ? Number(maxLengthMatch[1]) : undefined);
-    setAutoSize(matchBool("autoSize"));
-    setAllowClear(matchBool("allowClear"));
-    setShowCount(matchBool("showCount"));
-    setDisabled(matchBool("disabled"));
-    setReadOnly(matchBool("readOnly"));
-    setAutoFocus(matchBool("autoFocus"));
+    setLocalFields((prev) => ({
+      ...prev,
+      label: matchAttr("label"),
+      name: matchAttr("name"),
+      placeholder: matchAttr("placeholder"),
+      inputId: matchAttr("id"),
+      rows: matchNumberProp("rows") || 4,
+      maxLength: matchNumberProp("maxLength"),
+      disabled: matchBool("disabled"),
+      readOnly: matchBool("readOnly"),
+      autoFocus: matchBool("autoFocus"),
+      autoSize: matchBool("autoSize"),
+      allowClear: matchBool("allowClear"),
+      showCount: matchBool("showCount"),
+      size:
+        codeBlock.match(/size="(large|middle|small)"/)?.[1] === "large"
+          ? "large"
+          : codeBlock.match(/size="(large|middle|small)"/)?.[1] === "small"
+          ? "small"
+          : "middle",
+      status:
+        codeBlock.match(/status="(error|warning)"/)?.[1] === "error"
+          ? "error"
+          : codeBlock.match(/status="(error|warning)"/)?.[1] === "warning"
+          ? "warning"
+          : "",
+      className: matchAttr("className"),
+    }));
+  }, [open, codeBlock]);
 
-    const sizeValue = sizeMatch?.[1];
-    setSize(
-      sizeValue === "small" || sizeValue === "middle" || sizeValue === "large"
-        ? sizeValue
-        : "middle"
+  const handleSave = () => {
+    const currentErrors = validateAndSave();
+
+    const hasAdvancedErrors = [
+      "errorAutoSize",
+      "errorAllowClear",
+      "errorShowCount",
+      "errorId",
+      "errorClassName",
+      "errorSize",
+      "errorStatus",
+    ].some((key) => currentErrors[key]);
+
+    if (hasAdvancedErrors && !activePanels.includes("1")) {
+      setActivePanels([...activePanels, "1"]);
+    }
+
+    const hasAnyErrors = Object.keys(currentErrors).some(
+      (key) => currentErrors[key]
     );
 
-    const statusValue = statusMatch?.[1];
-    setStatus(
-      statusValue === "error" || statusValue === "warning" ? statusValue : ""
-    );
-  }, [codeBlock]);
-
-  const buildCode = () => {
-    const inputProps: string[] = [];
-
-    if (placeholder) inputProps.push(`placeholder="${placeholder}"`);
-    if (rows) inputProps.push(`rows={${rows}}`);
-    if (maxLength !== undefined) inputProps.push(`maxLength={${maxLength}}`);
-    if (disabled) inputProps.push(`disabled`);
-    if (readOnly) inputProps.push(`readOnly`);
-    if (autoFocus) inputProps.push(`autoFocus`);
-    if (antdVersion !== "v3" && autoSize) inputProps.push(`autoSize`);
-    if (antdVersion !== "v3" && allowClear) inputProps.push(`allowClear`);
-    if (antdVersion !== "v3" && showCount) inputProps.push(`showCount`);
-    if (antdVersion !== "v3" && status) inputProps.push(`status="${status}"`);
-    if (size && size !== "middle") inputProps.push(`size="${size}"`);
-    if (inputId) inputProps.push(`id="${inputId}"`);
-
-    return `<Form.Item label="${label}" name="${name}">
-  <Input.TextArea ${inputProps.join(" ")} />
-</Form.Item>`;
+    if (!hasAnyErrors) {
+      onSave(buildInputCode(localFields, {}, "Input.TextArea"));
+      return true;
+    }
+    return false;
   };
 
   return (
@@ -103,128 +159,55 @@ export default function TextAreaEditEditModal({
       open={open}
       title="Editar TextArea"
       onCancel={onCancel}
-      onOk={() => onSave(buildCode())}
+      onOk={handleSave}
       okText="Guardar"
       cancelText="Cancelar"
     >
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="Etiqueta"
-          addonBefore="label"
+        <BasicFields
+          fields={localFields}
+          setField={(key, value) =>
+            setLocalFields((prev) => ({ ...prev, [key]: value }))
+          }
+          errors={errors}
+          show={[
+            "label",
+            "name",
+            "placeholder",
+            "rows",
+            "maxLength",
+            "disabled",
+            "readOnly",
+            "autoFocus",
+            "size",
+            "status",
+          ]}
         />
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre (name)"
-          addonBefore="name"
-        />
-        <Input
-          value={placeholder}
-          onChange={(e) => setPlaceholder(e.target.value)}
-          placeholder="Placeholder"
-          addonBefore="placeholder"
-        />
-        <Input
-          type="number"
-          value={rows}
-          min={1}
-          onChange={(e) => setRows(Number(e.target.value) || 4)}
-          placeholder="Filas (rows)"
-          addonBefore="rows"
-        />
-        <Input
-          type="number"
-          value={maxLength}
-          onChange={(e) => setMaxLength(Number(e.target.value) || undefined)}
-          placeholder="Max Length"
-          addonBefore="maxLength"
-        />
-        <Checkbox
-          checked={disabled}
-          onChange={(e) => setDisabled(e.target.checked)}
+
+        <Collapse
+          ghost
+          activeKey={activePanels}
+          onChange={(keys) => setActivePanels(keys as string[])}
         >
-          disabled
-        </Checkbox>
-
-        <Collapse ghost>
           <Panel header="Opciones avanzadas" key="1">
-            <Checkbox
-              checked={autoSize}
-              onChange={(e) => setAutoSize(e.target.checked)}
-              disabled={antdVersion === "v3"}
-              className="mb-2"
-            >
-              autoSize
-            </Checkbox>
-
-            <Checkbox
-              checked={allowClear}
-              onChange={(e) => setAllowClear(e.target.checked)}
-              disabled={antdVersion === "v3"}
-              className="mb-2"
-            >
-              allowClear
-            </Checkbox>
-
-            <Checkbox
-              checked={showCount}
-              onChange={(e) => setShowCount(e.target.checked)}
-              disabled={antdVersion === "v3"}
-              className="mb-2"
-            >
-              showCount
-            </Checkbox>
-
-            <Checkbox
-              checked={readOnly}
-              onChange={(e) => setReadOnly(e.target.checked)}
-              className="mb-2"
-            >
-              readOnly
-            </Checkbox>
-
-            <Checkbox
-              checked={autoFocus}
-              onChange={(e) => setAutoFocus(e.target.checked)}
-              className="mb-2"
-            >
-              autoFocus
-            </Checkbox>
-
-            <Input
-              value={inputId}
-              onChange={(e) => setInputId(e.target.value)}
-              placeholder="ID del input"
-              addonBefore="id"
-              className="mb-2"
+            <AdvancedFields
+              fields={localFields}
+              setField={(key, value) =>
+                setLocalFields((prev) => ({ ...prev, [key]: value }))
+              }
+              errors={errors}
+              show={[
+                "autoSize",
+                "allowClear",
+                "showCount",
+                "inputId",
+                "className",
+                "size",
+                "status",
+              ]}
+              antdVersion={antdVersion}
             />
-
-            <div className="mb-2">
-              <label className="block mb-1">Tamaño (size)</label>
-              <Select value={size} onChange={setSize} style={{ width: "100%" }}>
-                <Option value="small">small</Option>
-                <Option value="middle">middle</Option>
-                <Option value="large">large</Option>
-              </Select>
-            </div>
-
-            {antdVersion !== "v3" && (
-              <div>
-                <label className="block mb-1">Estado</label>
-                <Select
-                  value={status}
-                  onChange={setStatus}
-                  style={{ width: "100%" }}
-                >
-                  <Option value="">none</Option>
-                  <Option value="error">error</Option>
-                  <Option value="warning">warning</Option>
-                </Select>
-              </div>
-            )}
           </Panel>
         </Collapse>
       </div>

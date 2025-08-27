@@ -10,11 +10,13 @@ interface AdvancedFieldsProps {
     value: BaseInputFields[K]
   ) => void;
   errors?: Record<string, string>;
-  show: (keyof BaseInputFields | "allowClear" | "showCount")[];
+  show: (keyof BaseInputFields | "allowClear" | "showCount" | "showSearch")[]; // agregado showSearch
   allowClear?: boolean;
   showCount?: boolean;
+  showSearch?: boolean; // agregado
   setAllowClear?: (value: boolean) => void;
   setShowCount?: (value: boolean) => void;
+  setShowSearch?: (value: boolean) => void; // agregado
   setVisibilityToggle?: (value: boolean) => void;
   antdVersion?: "v3" | "v4" | "v5";
 }
@@ -26,8 +28,10 @@ export function AdvancedFields({
   show,
   allowClear,
   showCount,
+  showSearch,
   setAllowClear,
   setShowCount,
+  setShowSearch,
   setVisibilityToggle,
   antdVersion,
 }: AdvancedFieldsProps) {
@@ -118,6 +122,25 @@ export function AdvancedFields({
         </Checkbox>
       )}
 
+      {setShowSearch && show.includes("showSearch") && (
+        <Checkbox
+          checked={showSearch}
+          onChange={(e) => setShowSearch(e.target.checked)}
+        >
+          showSearch
+        </Checkbox>
+      )}
+
+      {show.includes("autoSize") && (
+        <Checkbox
+          checked={fields.autoSize || false}
+          onChange={(e) => setField("autoSize", e.target.checked)}
+          disabled={antdVersion === "v3"}
+        >
+          autoSize
+        </Checkbox>
+      )}
+
       {setShowCount && show.includes("showCount") && (
         <Checkbox
           checked={showCount}
@@ -193,37 +216,33 @@ export function AdvancedFields({
       )}
 
       {show.includes("step") && (
-        <>
-          <Input
-            type="number"
-            value={fields.step ?? ""}
-            onChange={(e) =>
-              setField(
-                "step",
-                e.target.value === "" ? undefined : Number(e.target.value)
-              )
-            }
-            placeholder="Step"
-            addonBefore="step"
-          />
-        </>
+        <Input
+          type="number"
+          value={fields.step ?? ""}
+          onChange={(e) =>
+            setField(
+              "step",
+              e.target.value === "" ? undefined : Number(e.target.value)
+            )
+          }
+          placeholder="Step"
+          addonBefore="step"
+        />
       )}
 
       {show.includes("precision") && (
-        <>
-          <Input
-            type="number"
-            value={fields.precision ?? ""}
-            onChange={(e) =>
-              setField(
-                "precision",
-                e.target.value === "" ? undefined : Number(e.target.value)
-              )
-            }
-            placeholder="Precision"
-            addonBefore="precision"
-          />
-        </>
+        <Input
+          type="number"
+          value={fields.precision ?? ""}
+          onChange={(e) =>
+            setField(
+              "precision",
+              e.target.value === "" ? undefined : Number(e.target.value)
+            )
+          }
+          placeholder="Precision"
+          addonBefore="precision"
+        />
       )}
 
       {show.includes("keyboard") && (
@@ -242,6 +261,46 @@ export function AdvancedFields({
         >
           controls
         </Checkbox>
+      )}
+
+      {show.includes("filterOption") && (
+        <Checkbox
+          checked={fields.filterOption !== false}
+          onChange={(e) => setField("filterOption", e.target.checked)}
+        >
+          filterOption
+        </Checkbox>
+      )}
+
+      {show.includes("loading") && (
+        <Checkbox
+          checked={fields.loading || false}
+          onChange={(e) => setField("loading", e.target.checked)}
+        >
+          loading
+        </Checkbox>
+      )}
+
+      {show.includes("optionFilterProp") && (
+        <Input
+          value={fields.optionFilterProp || ""}
+          onChange={(e) => setField("optionFilterProp", e.target.value)}
+          addonBefore="optionFilterProp"
+        />
+      )}
+
+      {show.includes("maxTagCount") && (
+        <Input
+          type="number"
+          value={fields.maxTagCount ?? ""}
+          onChange={(e) =>
+            setField(
+              "maxTagCount",
+              e.target.value === "" ? undefined : Number(e.target.value)
+            )
+          }
+          addonBefore="maxTagCount"
+        />
       )}
     </div>
   );

@@ -1,20 +1,16 @@
 "use client";
 
-import {
-  Modal,
-  Input,
-  Checkbox,
-  Select,
-  Button,
-  Collapse,
-  Divider,
-  Space,
-} from "antd";
 import { useEffect, useState } from "react";
+import { Modal, Divider, Collapse } from "antd";
 import { useAntdVersion } from "@/context/AntdVersionContext";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { useInputValidation } from "@/hooks/useInputValidation";
+import { buildInputCode } from "@/utils/modals/buildInputCode";
+import { useCollapsePanels } from "@/hooks/modals/useCollapsePanels";
+import { BaseInputFields } from "@/types/BaseInputFields";
+import { BasicFields } from "@/components/modals/BasicFields";
+import { AdvancedFields } from "@/components/modals/AdvancedFields";
+import { OptionsFields } from "./OptionsFields";
 
-const { Option } = Select;
 const { Panel } = Collapse;
 
 interface SelectEditModalProps {
@@ -24,9 +20,11 @@ interface SelectEditModalProps {
   onSave: (updatedCode: string) => void;
 }
 
-interface OptionItem {
-  label: string;
-  value: string;
+interface SelectFields extends BaseInputFields {
+  allowClear?: boolean;
+  showSearch?: boolean;
+  mode?: "" | "multiple" | "tags";
+  options: { label: string; value: string }[];
 }
 
 export default function SelectEditModal({
@@ -37,124 +35,161 @@ export default function SelectEditModal({
 }: SelectEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
-  const [label, setLabel] = useState("");
-  const [name, setName] = useState("");
-  const [placeholder, setPlaceholder] = useState("");
-  const [mode, setMode] = useState<"" | "multiple" | "tags">("");
+  const [localFields, setLocalFields] = useState<SelectFields>({
+    label: "",
+    name: "",
+    placeholder: "",
+    disabled: false,
+    readOnly: false,
+    autoFocus: false,
+    size: "middle",
+    status: "",
+    inputId: "",
+    addonBefore: "",
+    addonAfter: "",
+    prefix: "",
+    suffix: "",
+    className: "",
+    minLength: undefined,
+    maxLength: undefined,
+    allowClear: false,
+    showSearch: false,
+    mode: "",
+    options: [],
+  });
 
-  const [options, setOptions] = useState<OptionItem[]>([]);
+  // --- useCollapse para Advanced ---
+  const {
+    activePanels: activeAdvancedPanels,
+    setActivePanels: setActiveAdvancedPanels,
+    validateAndOpen: validateAndOpenAdvanced,
+  } = useCollapsePanels(
+    [],
+    [
+      "errorAddonBefore",
+      "errorAddonAfter",
+      "errorPrefix",
+      "errorSuffix",
+      "errorId",
+      "errorSize",
+      "errorStatus",
+      "errorClassName",
+    ]
+  );
 
-  // Advanced options
-  const [allowClear, setAllowClear] = useState(false);
-  const [disabled, setDisabled] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  const [autoFocus, setAutoFocus] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [size, setSize] = useState<"large" | "middle" | "small">("middle");
-  const [status, setStatus] = useState<"" | "error" | "warning">("");
-  const [inputId, setInputId] = useState("");
-  const [optionFilterProp, setOptionFilterProp] = useState("");
-  const [filterOption, setFilterOption] = useState(true);
-  const [maxTagCount, setMaxTagCount] = useState<number | undefined>(undefined);
+  // --- useCollapse para Options ---
+  const {
+    activePanels: activeOptionPanels,
+    setActivePanels: setActiveOptionPanels,
+    validateAndOpen: validateAndOpenOptions,
+  } = useCollapsePanels([], [], ["errorOptions"]);
 
+  const { errors, validateAndSave } = useInputValidation({
+    ...localFields,
+    id: localFields.inputId,
+    onSave,
+    buildCode: () =>
+      buildInputCode(
+        localFields,
+        {
+          allowClear: localFields.allowClear,
+          showSearch: localFields.showSearch,
+          mode: localFields.mode,
+        },
+        "Select"
+      ).replace(
+        "<Select ",
+        `<Select ${localFields.options.length > 0 ? "" : ""}`
+      ) +
+      (localFields.options.length > 0
+        ? `\n      ${localFields.options
+            .map(
+              (opt) =>
+                `<Select.Option value="${opt.value}">${opt.label}</Select.Option>`
+            )
+            .join("\n      ")}\n    </Select>`
+        : "</Select>"),
+  });
+
+  // Inicializar campos al abrir modal
   useEffect(() => {
+    if (!open) return;
+
     const matchAttr = (attr: string) =>
-      codeBlock.match(new RegExp(`${attr}="([^"]*)"`))?.[1] || "";
+      codeBlock.match(new RegExp(`${attr}="([^"]+)"`))?.[1] ||
+      codeBlock.match(new RegExp(`${attr}='([^']+)'`))?.[1] ||
+      "";
 
     const matchBool = (attr: string) =>
       new RegExp(`\\b${attr}\\b`).test(codeBlock);
-    const matchNumber = (attr: string) =>
-      codeBlock.match(new RegExp(`${attr}={(\\d+)}`))?.[1];
 
-    setLabel(matchAttr("label"));
-    setName(matchAttr("name"));
-    setPlaceholder(matchAttr("placeholder"));
-    setInputId(matchAttr("id"));
-    setOptionFilterProp(matchAttr("optionFilterProp"));
-    setFilterOption(!/filterOption=\{false\}/.test(codeBlock));
-    setMaxTagCount(
-      matchNumber("maxTagCount")
-        ? parseInt(matchNumber("maxTagCount")!)
-        : undefined
-    );
-
-    if (/mode="multiple"/.test(codeBlock)) setMode("multiple");
-    else if (/mode="tags"/.test(codeBlock)) setMode("tags");
-    else setMode("");
-
-    setAllowClear(matchBool("allowClear"));
-    setDisabled(matchBool("disabled"));
-    setShowSearch(matchBool("showSearch"));
-    setAutoFocus(matchBool("autoFocus"));
-    setLoading(matchBool("loading"));
-
-    const sizeMatch = codeBlock.match(/size="(small|middle|large)"/)?.[1];
-    setSize(
-      sizeMatch === "small" || sizeMatch === "large" ? sizeMatch : "middle"
-    );
-
-    const statusMatch = codeBlock.match(/status="(error|warning)"/)?.[1];
-    setStatus(
-      statusMatch === "error" || statusMatch === "warning" ? statusMatch : ""
-    );
-
-    const optionMatches = [
-      ...codeBlock.matchAll(/<Option value="([^"]+)">([^<]+)<\/Option>/g),
-    ];
-    const parsedOptions = optionMatches.map((m) => ({
-      value: m[1],
-      label: m[2],
+    setLocalFields((prev) => ({
+      ...prev,
+      label: matchAttr("label"),
+      name: matchAttr("name"),
+      placeholder: matchAttr("placeholder"),
+      inputId: matchAttr("id"),
+      addonBefore: matchAttr("addonBefore"),
+      addonAfter: matchAttr("addonAfter"),
+      prefix: matchAttr("prefix"),
+      suffix: matchAttr("suffix"),
+      className: matchAttr("className"),
+      disabled: matchBool("disabled"),
+      readOnly: matchBool("readOnly"),
+      autoFocus: matchBool("autoFocus"),
+      allowClear: matchBool("allowClear"),
+      showSearch: matchBool("showSearch"),
+      size:
+        codeBlock.match(/size="(large|middle|small)"/)?.[1] === "large"
+          ? "large"
+          : codeBlock.match(/size="(large|middle|small)"/)?.[1] === "small"
+          ? "small"
+          : "middle",
+      status:
+        codeBlock.match(/status="(error|warning)"/)?.[1] === "error"
+          ? "error"
+          : codeBlock.match(/status="(error|warning)"/)?.[1] === "warning"
+          ? "warning"
+          : "",
+      mode:
+        (codeBlock.match(/mode="(multiple|tags)"/)?.[1] as
+          | "multiple"
+          | "tags") || "",
+      options: Array.from(
+        codeBlock.matchAll(
+          /<Select\.Option value="([^"]+)">([^<]+)<\/Select\.Option>/g
+        )
+      ).map((m) => ({ value: m[1], label: m[2] })),
     }));
-    setOptions(
-      parsedOptions.length ? parsedOptions : [{ label: "Opción 1", value: "1" }]
+  }, [open, codeBlock]);
+
+  const handleSave = () => {
+    const currentErrors = validateAndSave();
+
+    // abrir panel Advanced si hay errores
+    validateAndOpenAdvanced(currentErrors);
+    // abrir panel Options si hay errores
+    validateAndOpenOptions(currentErrors);
+
+    const hasAnyErrors = Object.keys(currentErrors).some(
+      (key) => currentErrors[key]
     );
-  }, [codeBlock]);
 
-  const handleAddOption = () => {
-    setOptions([...options, { label: "", value: "" }]);
-  };
-
-  const handleOptionChange = (
-    index: number,
-    key: "label" | "value",
-    value: string
-  ) => {
-    const updated = [...options];
-    updated[index][key] = value;
-    setOptions(updated);
-  };
-
-  const handleRemoveOption = (index: number) => {
-    setOptions(options.filter((_, i) => i !== index));
-  };
-
-  const buildCode = () => {
-    const props: string[] = [];
-
-    if (placeholder) props.push(`placeholder="${placeholder}"`);
-    if (mode) props.push(`mode="${mode}"`);
-    if (allowClear) props.push("allowClear");
-    if (disabled) props.push("disabled");
-    if (showSearch) props.push("showSearch");
-    if (!filterOption) props.push("filterOption={false}");
-    if (autoFocus) props.push("autoFocus");
-    if (loading) props.push("loading");
-    if (inputId) props.push(`id="${inputId}"`);
-    if (optionFilterProp) props.push(`optionFilterProp="${optionFilterProp}"`);
-    if (maxTagCount !== undefined) props.push(`maxTagCount={${maxTagCount}}`);
-    if (size && size !== "middle") props.push(`size="${size}"`);
-    if (antdVersion !== "v3" && status) props.push(`status="${status}"`);
-
-    const optionsCode = options
-      .filter((opt) => opt.label && opt.value)
-      .map((opt) => `    <Option value="${opt.value}">${opt.label}</Option>`)
-      .join("\n");
-
-    return `<Form.Item label="${label}" name="${name}">
-  <Select ${props.join(" ")}>
-${optionsCode}
-  </Select>
-</Form.Item>`;
+    if (!hasAnyErrors) {
+      onSave(
+        buildInputCode(
+          localFields,
+          {
+            allowClear: localFields.allowClear,
+            showSearch: localFields.showSearch,
+            mode: localFields.mode,
+          },
+          "Select"
+        )
+      );
+      return true;
+    }
+    return false;
   };
 
   return (
@@ -162,162 +197,82 @@ ${optionsCode}
       open={open}
       title="Editar Select"
       onCancel={onCancel}
-      onOk={() => onSave(buildCode())}
+      onOk={handleSave}
       okText="Guardar"
       cancelText="Cancelar"
     >
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          addonBefore="label"
-        />
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          addonBefore="name"
-        />
-        <Input
-          value={placeholder}
-          onChange={(e) => setPlaceholder(e.target.value)}
-          addonBefore="placeholder"
+        <BasicFields
+          fields={localFields}
+          setField={(key, value) =>
+            setLocalFields((prev) => ({ ...prev, [key]: value }))
+          }
+          errors={errors}
+          show={[
+            "label",
+            "name",
+            "placeholder",
+            "disabled",
+            "readOnly",
+            "autoFocus",
+            "size",
+            "status",
+          ]}
         />
 
-        <div>
-          <label className="block mb-1">Modo</label>
-          <Select
-            value={mode}
-            onChange={(value) => setMode(value)}
-            style={{ width: "100%" }}
-          >
-            <Option value="">default</Option>
-            <Option value="multiple">multiple</Option>
-            <Option value="tags">tags</Option>
-          </Select>
-        </div>
-
-        <Divider>Opciones</Divider>
-        <Space direction="vertical" className="w-full">
-          {options.map((opt, idx) => (
-            <div key={idx} className="flex gap-2">
-              <Input
-                placeholder="Label"
-                value={opt.label}
-                onChange={(e) =>
-                  handleOptionChange(idx, "label", e.target.value)
-                }
-              />
-              <Input
-                placeholder="Value"
-                value={opt.value}
-                onChange={(e) =>
-                  handleOptionChange(idx, "value", e.target.value)
-                }
-              />
-              <Button
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() => handleRemoveOption(idx)}
-              />
-            </div>
-          ))}
-          <Button icon={<PlusOutlined />} onClick={handleAddOption}>
-            Agregar opción
-          </Button>
-        </Space>
-
-        <Collapse ghost>
-          <Panel header="Opciones avanzadas" key="1">
-            <Checkbox
-              checked={allowClear}
-              onChange={(e) => setAllowClear(e.target.checked)}
-              className="mb-2"
-            >
-              allowClear
-            </Checkbox>
-            <Checkbox
-              checked={disabled}
-              onChange={(e) => setDisabled(e.target.checked)}
-              className="mb-2"
-            >
-              disabled
-            </Checkbox>
-            <Checkbox
-              checked={showSearch}
-              onChange={(e) => setShowSearch(e.target.checked)}
-              className="mb-2"
-            >
-              showSearch
-            </Checkbox>
-            <Checkbox
-              checked={!filterOption}
-              onChange={(e) => setFilterOption(!e.target.checked)}
-              className="mb-2"
-            >
-              desactivar filterOption
-            </Checkbox>
-            <Checkbox
-              checked={autoFocus}
-              onChange={(e) => setAutoFocus(e.target.checked)}
-              className="mb-2"
-            >
-              autoFocus
-            </Checkbox>
-            <Checkbox
-              checked={loading}
-              onChange={(e) => setLoading(e.target.checked)}
-              className="mb-2"
-            >
-              loading
-            </Checkbox>
-            <Input
-              value={inputId}
-              onChange={(e) => setInputId(e.target.value)}
-              addonBefore="id"
-              className="mb-2"
-            />
-            <Input
-              value={optionFilterProp}
-              onChange={(e) => setOptionFilterProp(e.target.value)}
-              addonBefore="optionFilterProp"
-              className="mb-2"
-            />
-            <Input
-              type="number"
-              value={maxTagCount}
-              onChange={(e) =>
-                setMaxTagCount(
-                  e.target.value ? parseInt(e.target.value) : undefined
-                )
+        <Collapse
+          ghost
+          activeKey={activeOptionPanels}
+          onChange={(keys) => setActiveOptionPanels(keys as string[])}
+        >
+          <Panel header="Opciones" key="options">
+            <OptionsFields
+              options={localFields.options}
+              mode={localFields.mode}
+              setMode={(v) => setLocalFields((prev) => ({ ...prev, mode: v }))}
+              setOptions={(opts) =>
+                setLocalFields((prev) => ({ ...prev, options: opts }))
               }
-              addonBefore="maxTagCount"
-              className="mb-2"
+              errors={errors}
             />
+          </Panel>
+        </Collapse>
 
-            <div className="mb-2">
-              <label className="block mb-1">Tamaño</label>
-              <Select value={size} onChange={setSize} style={{ width: "100%" }}>
-                <Option value="small">small</Option>
-                <Option value="middle">middle</Option>
-                <Option value="large">large</Option>
-              </Select>
-            </div>
-
-            {antdVersion !== "v3" && (
-              <div>
-                <label className="block mb-1">Estado</label>
-                <Select
-                  value={status}
-                  onChange={setStatus}
-                  style={{ width: "100%" }}
-                >
-                  <Option value="">none</Option>
-                  <Option value="error">error</Option>
-                  <Option value="warning">warning</Option>
-                </Select>
-              </div>
-            )}
+        <Collapse
+          ghost
+          activeKey={activeAdvancedPanels}
+          onChange={(keys) => setActiveAdvancedPanels(keys as string[])}
+        >
+          <Panel header="Opciones avanzadas" key="1">
+            <AdvancedFields
+              fields={localFields}
+              setField={(key, value) =>
+                setLocalFields((prev) => ({ ...prev, [key]: value }))
+              }
+              errors={errors}
+              show={[
+                "addonBefore",
+                "addonAfter",
+                "prefix",
+                "suffix",
+                "inputId",
+                "className",
+                "size",
+                "status",
+                "allowClear",
+                "showSearch",
+              ]}
+              allowClear={localFields.allowClear}
+              setAllowClear={(v) =>
+                setLocalFields((prev) => ({ ...prev, allowClear: v }))
+              }
+              showSearch={localFields.showSearch}
+              setShowSearch={(v) =>
+                setLocalFields((prev) => ({ ...prev, showSearch: v }))
+              }
+              antdVersion={antdVersion}
+            />
           </Panel>
         </Collapse>
       </div>

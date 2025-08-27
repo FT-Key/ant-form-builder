@@ -27,9 +27,16 @@ export interface ValidationParams {
   danger?: boolean;
   loading?: boolean;
   disabled?: boolean;
+
+  // Campos específicos de Select
+  mode?: "" | "multiple" | "tags";
+  optionFilterProp?: string;
+  maxTagCount?: number;
 }
 
-export function useInputValidation(params: ValidationParams) {
+export function useInputValidation(
+  params: ValidationParams & { options?: { label: string; value: string }[] }
+) {
   const {
     onSave,
     buildCode,
@@ -49,22 +56,14 @@ export function useInputValidation(params: ValidationParams) {
     status,
     className,
     type,
+    mode,
+    optionFilterProp,
+    maxTagCount,
+    options,
   } = params;
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const validateField = (field: string, value: any, validator: Function) => {
-    const res = validator(value);
-    setErrors((prev) => ({
-      ...prev,
-      [field]: res.valid ? "" : res.error || "",
-    }));
-    return res.valid;
-  };
-
-  /**
-   * Ahora devuelve los errores actuales para poder usarlos fuera.
-   */
   const validateAndSave = (): Record<string, string> => {
     let hasError = false;
     const newErrors: Record<string, string> = {};
@@ -76,6 +75,7 @@ export function useInputValidation(params: ValidationParams) {
       if (!res.valid) hasError = true;
     };
 
+    // ---- Validaciones comunes ----
     if (label !== undefined)
       checkField("errorLabel", label, validators.validateLabel);
     if (name !== undefined)
@@ -117,6 +117,31 @@ export function useInputValidation(params: ValidationParams) {
       checkField("errorButtonLabel", label, validators.validateButtonLabel);
     if (size !== undefined && type !== undefined)
       checkField("errorButtonSize", size, validators.validateButtonSize);
+
+    // ---- Validaciones específicas de Select ----
+    if (mode !== undefined)
+      checkField("errorMode", mode, validators.validateSelectMode);
+    if (optionFilterProp !== undefined)
+      checkField(
+        "errorOptionFilterProp",
+        optionFilterProp,
+        validators.validateOptionFilterProp
+      );
+    if (maxTagCount !== undefined)
+      checkField(
+        "errorMaxTagCount",
+        maxTagCount,
+        validators.validateMaxTagCount
+      );
+
+    // Validar options
+    if (options !== undefined) {
+      const res = validators.validateOptionsArray(options);
+      if (!res.valid) {
+        Object.assign(newErrors, res.errors);
+        hasError = true;
+      }
+    }
 
     setErrors(newErrors);
 

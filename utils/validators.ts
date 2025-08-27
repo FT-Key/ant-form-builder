@@ -266,3 +266,42 @@ export function validateButtonSize(value?: string) {
   }
   return { valid: true };
 }
+
+export const validateSelectMode = (mode: any) => {
+  const validValues = ["", "multiple", "tags"];
+  return validValues.includes(mode)
+    ? { valid: true }
+    : { valid: false, error: "El modo debe ser '', 'multiple' o 'tags'" };
+};
+
+export const validateOptionFilterProp = (prop: any) => {
+  if (typeof prop !== "string")
+    return { valid: false, error: "Debe ser string" };
+  return { valid: true };
+};
+
+export const validateMaxTagCount = (count: any) => {
+  if (typeof count !== "number" || count < 0)
+    return { valid: false, error: "Debe ser un número >= 0" };
+  return { valid: true };
+};
+
+export const validateOptionsArray = (options: { label: string; value: string }[]) => {
+  const errors: Record<string, string> = {};
+  if (!Array.isArray(options) || options.length === 0) {
+    errors["errorOptions"] = "Debe haber al menos una opción";
+    return { valid: false, errors };
+  }
+  let valid = true;
+  options.forEach((opt, idx) => {
+    if (!opt.label) {
+      errors[`errorOption${idx}Label`] = "El label no puede estar vacío";
+      valid = false;
+    }
+    if (!opt.value) {
+      errors[`errorOption${idx}Value`] = "El value no puede estar vacío";
+      valid = false;
+    }
+  });
+  return { valid, errors };
+};

@@ -1,5 +1,7 @@
-import { Input, Checkbox } from "antd";
+import { Input, Checkbox, Select } from "antd";
 import { BaseInputFields } from "@/types/BaseInputFields";
+
+const { Option } = Select;
 
 interface BasicFieldsProps {
   fields: BaseInputFields;
@@ -33,7 +35,6 @@ export function BasicFields({
           )}
         </>
       )}
-
       {show.includes("name") && (
         <>
           <Input
@@ -48,7 +49,6 @@ export function BasicFields({
           )}
         </>
       )}
-
       {show.includes("placeholder") && (
         <>
           <Input
@@ -63,7 +63,6 @@ export function BasicFields({
           )}
         </>
       )}
-
       {show.includes("minLength") && (
         <>
           <Input
@@ -84,7 +83,6 @@ export function BasicFields({
           )}
         </>
       )}
-
       {show.includes("maxLength") && (
         <>
           <Input
@@ -105,7 +103,6 @@ export function BasicFields({
           )}
         </>
       )}
-
       {show.includes("min") && (
         <>
           <Input
@@ -126,7 +123,6 @@ export function BasicFields({
           )}
         </>
       )}
-
       {show.includes("max") && (
         <>
           <Input
@@ -147,7 +143,6 @@ export function BasicFields({
           )}
         </>
       )}
-
       {show.includes("disabled") && (
         <Checkbox
           checked={fields.disabled}
@@ -156,7 +151,6 @@ export function BasicFields({
           disabled
         </Checkbox>
       )}
-
       {show.includes("readOnly") && (
         <Checkbox
           checked={fields.readOnly}
@@ -165,7 +159,6 @@ export function BasicFields({
           readOnly
         </Checkbox>
       )}
-
       {show.includes("autoFocus") && (
         <Checkbox
           checked={fields.autoFocus}
@@ -173,6 +166,38 @@ export function BasicFields({
         >
           autoFocus
         </Checkbox>
+      )}
+      {show.includes("rows") && (
+        <>
+          <Input
+            type="number"
+            value={fields.rows ?? 4}
+            onChange={(e) =>
+              setField(
+                "rows",
+                e.target.value === "" ? undefined : Number(e.target.value)
+              )
+            }
+            placeholder="Filas (rows)"
+            addonBefore="rows"
+            status={errors["errorRows"] ? "error" : undefined}
+          />
+          {errors["errorRows"] && (
+            <div className="text-red-500">{errors["errorRows"]}</div>
+          )}
+        </>
+      )}
+
+      {show.includes("mode") && (
+        <Select
+          value={fields.mode || ""}
+          onChange={(v) => setField("mode", v as "" | "multiple" | "tags")}
+          style={{ width: "100%" }}
+        >
+          <Select.Option value="">default</Select.Option>
+          <Select.Option value="multiple">multiple</Select.Option>
+          <Select.Option value="tags">tags</Select.Option>
+        </Select>
       )}
     </div>
   );

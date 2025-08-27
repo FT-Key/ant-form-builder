@@ -24,10 +24,12 @@ export interface BaseInputFields {
   // Validaciones numéricas
   minLength?: number;
   maxLength?: number;
+  rows?: number; // <--- Agregado para TextArea
 
   // Booleanos adicionales
   allowClear?: boolean;
   showCount?: boolean;
+  autoSize?: boolean; // <--- Agregado para TextArea
 
   // Visibilidad
   visibilityToggle?: boolean;
@@ -39,4 +41,13 @@ export interface BaseInputFields {
   precision?: number;
   keyboard?: boolean;
   controls?: boolean;
+
+  // 🔽 Select-specific
+  mode?: "" | "multiple" | "tags";
+  options?: { label: string; value: string }[];
+  optionFilterProp?: string;
+  filterOption?: boolean;
+  maxTagCount?: number;
+  loading?: boolean;
+  showSearch?: boolean;
 }
