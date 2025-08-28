@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 export function useCollapsePanels(
   basicErrors: string[] = [],
   advancedErrors: string[] = [],
-  optionsErrors: string[] = [] // para opciones, se puede pasar "errorOptions"
+  optionsErrorPrefixes: string[] = ["errorOption"] // prefijo correcto para Options
 ) {
   const [activePanels, setActivePanelsState] = useState<string[]>([]);
   const isManualChange = useRef(false);
@@ -13,26 +13,33 @@ export function useCollapsePanels(
     setActivePanelsState(panels);
   };
 
-  // Abrir automáticamente paneles con errores
   const validateAndOpen = (errors: Record<string, string>) => {
     const newActivePanels: string[] = [];
 
-    // Basic
-    if (basicErrors.some((key) => errors[key])) newActivePanels.push("0");
+    // ---- Basic ----
+    const basicHasError = basicErrors.some((key) => errors[key]);
+    if (basicHasError) newActivePanels.push("0");
 
-    // Advanced
-    if (advancedErrors.some((key) => errors[key])) newActivePanels.push("1");
+    // ---- Advanced ----
+    const advancedHasError = advancedErrors.some((key) => errors[key]);
+    if (advancedHasError) newActivePanels.push("1");
 
-    // Options: abrir si cualquier key empieza con "errorOptions"
-    if (
-      Object.keys(errors).some(
-        (key) => key.startsWith("errorOptions") && errors[key]
-      )
-    ) {
-      newActivePanels.push("options");
-    }
+    // ---- Options ----
+    let optionsHasError = false;
 
-    // Forzar apertura
+    Object.keys(errors).forEach((key) => {
+      if (
+        optionsErrorPrefixes.some(
+          (prefix) => key.startsWith(prefix) && errors[key]
+        )
+      ) {
+        optionsHasError = true;
+      }
+    });
+
+    if (optionsHasError) newActivePanels.push("options");
+
+    // ---- Actualizar estado ----
     isManualChange.current = false;
     setActivePanelsState(newActivePanels);
   };

@@ -10,7 +10,8 @@ interface OptionsFieldsProps {
   mode?: "" | "multiple" | "tags";
   setMode: (value: "" | "multiple" | "tags") => void;
   setOptions: (options: { label: string; value: string }[]) => void;
-  errors?: Record<string, string>; // errores opcionales
+  errors?: Record<string, string>;
+  show?: string[];
 }
 
 export function OptionsFields({
@@ -19,59 +20,73 @@ export function OptionsFields({
   setMode,
   setOptions,
   errors = {},
+  show = ["options"],
 }: OptionsFieldsProps) {
   return (
     <div className="space-y-3">
       {/* Modo de selección */}
-      <Select
-        value={mode ?? ""}
-        onChange={(v) => setMode(v as "" | "multiple" | "tags")}
-        style={{ width: "100%", marginBottom: 12 }}
-        status={errors["errorMode"] ? "error" : undefined}
-      >
-        <Option value="">default</Option>
-        <Option value="multiple">multiple</Option>
-        <Option value="tags">tags</Option>
-      </Select>
-      {errors["errorMode"] && (
-        <div className="text-red-500">{errors["errorMode"]}</div>
-      )}
+      <div>
+        <Select
+          value={mode ?? ""}
+          onChange={(v) => setMode(v as "" | "multiple" | "tags")}
+          style={{ width: "100%", marginBottom: 12 }}
+          status={errors["errorMode"] ? "error" : undefined}
+        >
+          <Option value="">default</Option>
+          <Option value="multiple">multiple</Option>
+          <Option value="tags">tags</Option>
+        </Select>
+        {errors["errorMode"] && (
+          <div className="text-red-500 text-sm">{errors["errorMode"]}</div>
+        )}
+      </div>
 
       {/* Lista de opciones dinámicas */}
       {options.map((opt, idx) => (
-        <Space key={idx} style={{ display: "flex", marginBottom: 8 }}>
-          <Input
-            placeholder="Label"
-            value={opt.label}
-            onChange={(e) => {
-              const newOptions = [...options];
-              newOptions[idx].label = e.target.value;
-              setOptions(newOptions);
-            }}
-            status={errors[`errorOption${idx}Label`] ? "error" : undefined}
-          />
-          {errors[`errorOption${idx}Label`] && (
-            <div className="text-red-500">
-              {errors[`errorOption${idx}Label`]}
-            </div>
-          )}
+        <Space
+          key={idx}
+          style={{ display: "flex", marginBottom: 8 }}
+          align="start"
+        >
+          {/* Label */}
+          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+            <Input
+              placeholder="Label"
+              value={opt.label}
+              onChange={(e) => {
+                const newOptions = [...options];
+                newOptions[idx].label = e.target.value;
+                setOptions(newOptions);
+              }}
+              status={errors[`errorOption${idx}Label`] ? "error" : undefined}
+            />
+            {errors[`errorOption${idx}Label`] && (
+              <div className="text-red-500 text-sm">
+                {errors[`errorOption${idx}Label`]}
+              </div>
+            )}
+          </div>
 
-          <Input
-            placeholder="Value"
-            value={opt.value}
-            onChange={(e) => {
-              const newOptions = [...options];
-              newOptions[idx].value = e.target.value;
-              setOptions(newOptions);
-            }}
-            status={errors[`errorOption${idx}Value`] ? "error" : undefined}
-          />
-          {errors[`errorOption${idx}Value`] && (
-            <div className="text-red-500">
-              {errors[`errorOption${idx}Value`]}
-            </div>
-          )}
+          {/* Value */}
+          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+            <Input
+              placeholder="Value"
+              value={opt.value}
+              onChange={(e) => {
+                const newOptions = [...options];
+                newOptions[idx].value = e.target.value;
+                setOptions(newOptions);
+              }}
+              status={errors[`errorOption${idx}Value`] ? "error" : undefined}
+            />
+            {errors[`errorOption${idx}Value`] && (
+              <div className="text-red-500 text-sm">
+                {errors[`errorOption${idx}Value`]}
+              </div>
+            )}
+          </div>
 
+          {/* Botón eliminar */}
           <Button
             icon={<DeleteOutlined />}
             onClick={() => {

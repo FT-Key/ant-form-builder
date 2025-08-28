@@ -1,13 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   DragDropContext,
   Droppable,
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
-import { EditOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, CheckOutlined } from "@ant-design/icons";
 import ModalRenderer from "./ModalRenderer";
 import { useInputEditorLogic } from "@/hooks/useInputEditorLogic";
 import { useInputHierarchy } from "@/hooks/useInputHierarchy";
@@ -41,6 +41,24 @@ export default function InputList({
     updateLocalCodeBlock,
   } = useInputEditorLogic(inputs, getCodeBlockByInputId, onUpdateInput);
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const startConfirmTimeout = (id: string) => {
+    setConfirmDeleteId(id);
+    setTimeout(() => {
+      setConfirmDeleteId((prev) => (prev === id ? null : prev));
+    }, 2000); // vuelve al basurero en 2 segundos
+  };
+
+  const handleDeleteClick = (id: string) => {
+    if (confirmDeleteId === id) {
+      onUpdateInput(id, "");
+      setConfirmDeleteId(null);
+    } else {
+      startConfirmTimeout(id);
+    }
+  };
+
   // Mapeamos inputs con código
   const inputsWithCode = React.useMemo(
     () =>
@@ -56,7 +74,6 @@ export default function InputList({
     [inputs, getCodeBlockByInputId]
   );
 
-  // FILTRAMOS solo inputs raíz para la jerarquía y render
   const rootInputs = React.useMemo(
     () =>
       filterRootInputs(inputsWithCode).map((input) => ({
@@ -71,6 +88,24 @@ export default function InputList({
   const renderInputItem = (input: InputItem, index: number, level = 0) => {
     const hasChildren = hierarchy[input.id]?.length > 0;
     const children = hierarchy[input.id] || [];
+
+    const renderButtons = (id: string) => (
+      <div className="flex space-x-2">
+        <EditOutlined
+          className="text-gray-500 hover:text-blue-600 cursor-pointer"
+          onClick={() => openEditor(id)}
+        />
+        <button
+          onClick={() => handleDeleteClick(id)}
+          onMouseLeave={() =>
+            confirmDeleteId === id && setConfirmDeleteId(null)
+          }
+          className="text-red-500 hover:text-red-700 cursor-pointer focus:outline-none"
+        >
+          {confirmDeleteId === id ? <CheckOutlined /> : <DeleteOutlined />}
+        </button>
+      </div>
+    );
 
     return (
       <React.Fragment key={input.id}>
@@ -106,12 +141,7 @@ export default function InputList({
                 )}
                 <span>{input.label}</span>
               </div>
-              <EditOutlined
-                className="text-gray-500 hover:text-blue-600 cursor-pointer"
-                onClick={() => {
-                  openEditor(input.id);
-                }}
-              />
+              {renderButtons(input.id)}
             </div>
           )}
         </Draggable>
@@ -125,10 +155,7 @@ export default function InputList({
                 style={{ paddingLeft: 16 + (level + 1) * 20 }}
               >
                 <span>{child.label}</span>
-                <EditOutlined
-                  className="text-gray-400 hover:text-blue-600 cursor-pointer"
-                  onClick={() => openEditor(child.id)}
-                />
+                {renderButtons(child.id)}
               </div>
             ))}
           </div>
@@ -155,7 +182,6 @@ export default function InputList({
               ref={provided.innerRef}
               className="space-y-2 bg-gray-50 p-4 rounded border border-gray-300 min-h-[300px]"
             >
-              {/* Renderizamos solo los inputs raíz */}
               {rootInputs.map((input, index) => renderInputItem(input, index))}
               {provided.placeholder}
             </div>
