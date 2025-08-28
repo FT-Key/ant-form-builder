@@ -188,7 +188,7 @@ button:active:not(:disabled) {
   font-size: 14px;
 }
 
-.ant-btn-primary {
+/* .ant-btn-primary {
   background-color: #111827;
   border-color: #111827;
   font-weight: 500;
@@ -203,7 +203,7 @@ button:active:not(:disabled) {
 .ant-btn-primary:focus {
   background-color: #1f2937 !important;
   border-color: #1f2937 !important;
-}
+} */
 
 /* Card and container refinements */
 .ant-card {
