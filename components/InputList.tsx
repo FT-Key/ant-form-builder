@@ -8,6 +8,7 @@ import {
   DropResult,
 } from "@hello-pangea/dnd";
 import { EditOutlined, DeleteOutlined, CheckOutlined } from "@ant-design/icons";
+import { Tooltip } from "antd";
 import ModalRenderer from "./ModalRenderer";
 import { useInputEditorLogic } from "@/hooks/useInputEditorLogic";
 import { useInputHierarchy } from "@/hooks/useInputHierarchy";
@@ -47,12 +48,12 @@ export default function InputList({
     setConfirmDeleteId(id);
     setTimeout(() => {
       setConfirmDeleteId((prev) => (prev === id ? null : prev));
-    }, 2000); // vuelve al basurero en 2 segundos
+    }, 2000);
   };
 
   const handleDeleteClick = (id: string) => {
     if (confirmDeleteId === id) {
-      onUpdateInput(id, "");
+      onUpdateInput(id, ""); // 👈 lógica de borrado
       setConfirmDeleteId(null);
     } else {
       startConfirmTimeout(id);
@@ -85,27 +86,38 @@ export default function InputList({
 
   const { hierarchy, expanded, toggleExpand } = useInputHierarchy(rootInputs);
 
-  const renderInputItem = (input: InputItem, index: number, level = 0) => {
-    const hasChildren = hierarchy[input.id]?.length > 0;
-    const children = hierarchy[input.id] || [];
-
-    const renderButtons = (id: string) => (
-      <div className="flex space-x-2">
+  const renderButtons = (id: string) => (
+    <div className="flex space-x-3">
+      <Tooltip title="Editar">
         <EditOutlined
           className="text-gray-500 hover:text-blue-600 cursor-pointer"
           onClick={() => openEditor(id)}
         />
+      </Tooltip>
+
+      <Tooltip
+        title={confirmDeleteId === id ? "Confirmar eliminación" : "Eliminar"}
+      >
         <button
           onClick={() => handleDeleteClick(id)}
           onMouseLeave={() =>
             confirmDeleteId === id && setConfirmDeleteId(null)
           }
-          className="text-red-500 hover:text-red-700 cursor-pointer focus:outline-none"
+          className={`${
+            confirmDeleteId === id
+              ? "text-green-600 hover:text-green-800"
+              : "text-red-500 hover:text-red-700"
+          } cursor-pointer focus:outline-none`}
         >
           {confirmDeleteId === id ? <CheckOutlined /> : <DeleteOutlined />}
         </button>
-      </div>
-    );
+      </Tooltip>
+    </div>
+  );
+
+  const renderInputItem = (input: InputItem, index: number, level = 0) => {
+    const hasChildren = hierarchy[input.id]?.length > 0;
+    const children = hierarchy[input.id] || [];
 
     return (
       <React.Fragment key={input.id}>

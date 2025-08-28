@@ -27,7 +27,6 @@ export default function InputPasswordEditModal({
 }: InputPasswordEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
-  // Estado local editable
   const [localFields, setLocalFields] = useState<BaseInputFields>({
     label: "",
     name: "",
@@ -43,9 +42,8 @@ export default function InputPasswordEditModal({
     className: "",
     minLength: undefined,
     maxLength: undefined,
+    visibilityToggle: true, // inicializado
   });
-
-  const [visibilityToggle, setVisibilityToggle] = useState(true);
 
   const { activePanels, setActivePanels } = useCollapsePanels(
     [
@@ -65,16 +63,18 @@ export default function InputPasswordEditModal({
     ]
   );
 
-  // Hook de validación
   const { errors, validateAndSave } = useInputValidation({
     ...localFields,
     id: localFields.inputId,
     onSave,
     buildCode: () =>
-      buildInputCode(localFields, { visibilityToggle }, "Input.Password"),
+      buildInputCode(
+        localFields,
+        { visibilityToggle: localFields.visibilityToggle },
+        "Input.Password"
+      ),
   });
 
-  // Inicializar campos al abrir modal
   useEffect(() => {
     if (!open) return;
 
@@ -96,8 +96,7 @@ export default function InputPasswordEditModal({
       return undefined;
     };
 
-    setLocalFields((prev) => ({
-      ...prev,
+    setLocalFields({
       label: matchAttr("label"),
       name: matchAttr("name"),
       placeholder: matchAttr("placeholder"),
@@ -122,14 +121,11 @@ export default function InputPasswordEditModal({
           : codeBlock.match(/status="(error|warning)"/)?.[1] === "warning"
           ? "warning"
           : "",
-    }));
-
-    if (antdVersion === "v3") {
-      setVisibilityToggle(true);
-    } else {
-      const explicitFalse = /visibilityToggle=\{false\}/.test(codeBlock);
-      setVisibilityToggle(!explicitFalse);
-    }
+      visibilityToggle:
+        antdVersion === "v3"
+          ? true
+          : !/visibilityToggle=\{false\}/.test(codeBlock),
+    });
   }, [open, codeBlock, antdVersion]);
 
   const handleSave = () => {
@@ -153,7 +149,11 @@ export default function InputPasswordEditModal({
     );
     if (!hasAnyErrors) {
       onSave(
-        buildInputCode(localFields, { visibilityToggle }, "Input.Password")
+        buildInputCode(
+          localFields,
+          { visibilityToggle: localFields.visibilityToggle },
+          "Input.Password"
+        )
       );
       return true;
     }
@@ -213,7 +213,9 @@ export default function InputPasswordEditModal({
                 "visibilityToggle",
               ]}
               antdVersion={antdVersion}
-              setVisibilityToggle={setVisibilityToggle}
+              setVisibilityToggle={(value) =>
+                setLocalFields((prev) => ({ ...prev, visibilityToggle: value }))
+              }
             />
           </Panel>
         </Collapse>

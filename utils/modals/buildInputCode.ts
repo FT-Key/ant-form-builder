@@ -7,7 +7,6 @@ export function buildInputCode(
 ) {
   const props: string[] = [];
 
-  // mapping: usamos id en vez de inputId
   const mappedFields: Record<string, any> = {
     ...fields,
     ...extraProps,
@@ -15,13 +14,15 @@ export function buildInputCode(
   };
   delete mappedFields.inputId;
 
-  // extraemos options para tratarlas aparte
   const { options, ...rest } = mappedFields;
+
+  const skipInnerProps = new Set(["label", "name"]);
 
   for (const [key, value] of Object.entries(rest)) {
     if (value === undefined || value === "") continue;
+    if (skipInnerProps.has(key)) continue;
 
-    // ✅ Caso especial: controls y keyboard
+    // Casos especiales
     if (
       (key === "controls" || key === "keyboard") &&
       typeof value === "boolean"
@@ -30,14 +31,18 @@ export function buildInputCode(
       continue;
     }
 
-    // ✅ Booleanos normales
-    if (value === true) {
-      props.push(key);
+    // Booleanos normales
+    if (typeof value === "boolean") {
+      // Aquí agregamos visibilidad explícitamente
+      if (key === "visibilityToggle") {
+        props.push(`${key}={${value}}`);
+      } else if (value === true) {
+        props.push(key);
+      }
       continue;
     }
-    if (value === false) continue;
 
-    // ✅ Números
+    // Números que van entre llaves
     if (
       (key === "minLength" ||
         key === "maxLength" ||
@@ -49,11 +54,17 @@ export function buildInputCode(
       continue;
     }
 
-    // ✅ Default: string
+    if (key === "size" && value === "middle") continue;
+
     props.push(`${key}="${value}"`);
   }
 
-  // 🚀 Si es Select con opciones → renderizamos <Select.Option>
+  // Form.Item
+  const formItemAttrs: string[] = [];
+  if (fields.label !== undefined) formItemAttrs.push(`label="${fields.label}"`);
+  if (fields.name !== undefined) formItemAttrs.push(`name="${fields.name}"`);
+
+  // Select con options
   if (component === "Select" && Array.isArray(options) && options.length > 0) {
     const children = options
       .map(
@@ -62,15 +73,14 @@ export function buildInputCode(
       )
       .join("\n");
 
-    return `<Form.Item label="${fields.label}" name="${fields.name}">
+    return `<Form.Item ${formItemAttrs.join(" ")}>
     <Select ${props.join(" ")}>
 ${children}
     </Select>
   </Form.Item>`;
   }
 
-  // 🚀 Cualquier otro componente o Select sin opciones
-  return `<Form.Item label="${fields.label}" name="${fields.name}">
+  return `<Form.Item ${formItemAttrs.join(" ")}>
     <${component} ${props.join(" ")} />
   </Form.Item>`;
 }
