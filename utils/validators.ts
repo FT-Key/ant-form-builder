@@ -191,7 +191,7 @@ export function validateId(value: string) {
     };
   }
   // Validar que id tenga solo letras, números, guiones, guion bajo y no inicie con número
-  if (!/^[a-zA-Z_][a-zA-Z0-9-_:.]*$/.test(value)) {
+  if (!/^([a-zA-Z_][a-zA-Z0-9-_:.]*)?$/.test(value)) {
     return {
       valid: false,
       error:
@@ -286,7 +286,9 @@ export const validateMaxTagCount = (count: any) => {
   return { valid: true };
 };
 
-export const validateOptionsArray = (options: { label: string; value: string }[]) => {
+export const validateOptionsArray = (
+  options: { label: string; value: string }[]
+) => {
   const errors: Record<string, string> = {};
   if (!Array.isArray(options) || options.length === 0) {
     errors["errorOptions"] = "Debe haber al menos una opción";
