@@ -5,12 +5,20 @@ export type FormComponent = {
 
 export const v3: FormComponent[] = [
   {
+    label: "Submit",
+    code: `<Form.Item><Button type="primary" htmlType="submit">Submit</Button></Form.Item>`,
+  },
+  {
     label: "Text Input",
     code: `<Form.Item label="Text" name="text"><Input placeholder="Enter text" /></Form.Item>`,
   },
   {
     label: "Password",
     code: `<Form.Item label="Password" name="password"><Input.Password placeholder="Enter password" /></Form.Item>`,
+  },
+  {
+    label: "InputNumber",
+    code: `<Form.Item label="Number" name="number"><InputNumber placeholder="Enter a number" style={{ width: '100%' }} /></Form.Item>`,
   },
   {
     label: "Textarea",
@@ -54,7 +62,7 @@ export const v3: FormComponent[] = [
   },
   {
     label: "Slider",
-    code: `<Form.Item label="Volume" name="volume"><Slider tooltipVisible /></Form.Item>`,
+    code: `<Form.Item label="Volume" name="volume"><Slider /></Form.Item>`,
   },
   {
     label: "Rate",
@@ -67,10 +75,6 @@ export const v3: FormComponent[] = [
   {
     label: "TreeSelect",
     code: `<Form.Item label="Tree" name="tree"><TreeSelect treeData={[{ title: 'Node1', value: '0-0', key: '0-0' }]} placeholder="Please select" /></Form.Item>`,
-  },
-  {
-    label: "InputNumber",
-    code: `<Form.Item label="Number" name="number"><InputNumber placeholder="Enter a number" style={{ width: '100%' }} /></Form.Item>`,
   },
   {
     label: "Mentions",
@@ -107,13 +111,9 @@ export const v3: FormComponent[] = [
     label: "Search",
     code: `<Form.Item label="Search" name="search"><Input.Search placeholder="Search..." /></Form.Item>`,
   },
-  {
-    label: "Submit",
-    code: `<Form.Item><Button type="primary" htmlType="submit">Submit</Button></Form.Item>`,
-  },
 ];
 
-const v4: FormComponent[] = [
+export const v4: FormComponent[] = [
   ...v3,
   {
     label: "Form List (no preview)",
@@ -121,11 +121,11 @@ const v4: FormComponent[] = [
   },
   {
     label: "Form Item",
-    code: `<Form.Item label="Generic" name="generic"><Input placeholder="Enter value" /></Form.Item>`,
+    code: `<Form.Item label="Generic" name="generic"></Form.Item>`,
   },
   {
     label: "Input Group",
-    code: `<Form.Item label="Group" name="group"><Space.Compact style={{ display: 'flex' }}><Input placeholder="First" style={{ width: '50%' }} /><Input placeholder="Second" style={{ width: '50%' }} /></Space.Compact></Form.Item>`,
+    code: `<Form.Item label="Group" name="group">\n\t<Space.Compact style={{ display: 'flex' }}>\n\t\t<Input placeholder="First" style={{ width: '50%' }} />\n\t\t<Input placeholder="Second" style={{ width: '50%' }} />\n\t</Space.Compact>\n</Form.Item>`,
   },
   {
     label: "Descriptions",
@@ -158,7 +158,7 @@ export const v5: FormComponent[] = [
   },
   {
     label: "Watermark",
-    code: `<Watermark content="Demo"><div style={{ height: 100 }}>Watermarked</div></Watermark>`,
+    code: `<Watermark content="Demo"><div style={{ minHeight: "100px" }}>Watermarked</div></Watermark>`,
   },
   {
     label: "QRCode",

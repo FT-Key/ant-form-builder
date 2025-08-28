@@ -1,23 +1,21 @@
 import { Button } from "antd";
-import {
-  EyeOutlined,
-  CodeOutlined,
-  CopyOutlined,
-  DownloadOutlined,
-} from "@ant-design/icons";
+import { EyeOutlined, CodeOutlined } from "@ant-design/icons";
+import CopyCodeButton from "./CopyCodeButton";
+import DownloadImageButton from "./DownloadImageButton";
+import { RefObject } from "react";
 
 export default function ActionBar({
   showCode,
   setShowCode,
   code,
-  copyToClipboard,
-  downloadImage,
+  previewRef,
+  activeVersionId,
 }: {
   showCode: boolean;
   setShowCode: (v: boolean) => void;
   code: string;
-  copyToClipboard: (text: string) => void;
-  downloadImage: () => void;
+  previewRef: RefObject<HTMLElement>;
+  activeVersionId?: number | null;
 }) {
   const isEmpty = !code.trim();
 
@@ -29,36 +27,38 @@ export default function ActionBar({
         backgroundColor: "#ffffff",
         backgroundImage: isEmpty
           ? `repeating-linear-gradient(
-         45deg,
-         #f0f0f0,
-         #f0f0f0 1px,
-         transparent 2px,
-         transparent 20px
-       )`
+              45deg,
+              #f0f0f0,
+              #f0f0f0 1px,
+              transparent 2px,
+              transparent 20px
+            )`
           : "none",
       }}
     >
-      {!isEmpty && (
-        <div className="flex justify-between items-center">
-          <Button
-            icon={showCode ? <EyeOutlined /> : <CodeOutlined />}
-            onClick={() => setShowCode(!showCode)}
-            size="large"
-            className="border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 font-medium"
-          >
-            {showCode ? "Preview Form" : "View Code"}
-          </Button>
+      <div className="flex justify-between items-center">
+        {/* Toggle Preview / Code */}
+        <Button
+          icon={showCode ? <EyeOutlined /> : <CodeOutlined />}
+          onClick={() => setShowCode(!showCode)}
+          size="large"
+          className="border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 font-medium"
+        >
+          {showCode ? "Preview Form" : "View Code"}
+        </Button>
 
-          <Button
-            icon={showCode ? <CopyOutlined /> : <DownloadOutlined />}
-            onClick={showCode ? () => copyToClipboard(code) : downloadImage}
-            size="large"
-            className="border-gray-200 text-gray-700 hover:border-gray-300 hover:text-gray-900 font-medium"
-          >
-            {showCode ? "Copy Code" : "Export"}
-          </Button>
-        </div>
-      )}
+        {/* Botones secundarios */}
+        {!isEmpty &&
+          (showCode ? (
+            <CopyCodeButton code={code} />
+          ) : (
+            <DownloadImageButton
+              nodeRef={previewRef}
+              fileName={`form-version-${activeVersionId ?? "latest"}.png`}
+              excludeClassNames={["action-bar"]}
+            />
+          ))}
+      </div>
     </div>
   );
 }

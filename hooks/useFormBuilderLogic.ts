@@ -1,205 +1,286 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { toPng } from "html-to-image";
-import { message } from "antd";
-import type { AntdVersion } from "../context/AntdVersionContext";
+"use client";
 
-export function useFormBuilderLogic(
-  antdVersion: AntdVersion,
-  getBaseCode: (v: AntdVersion) => string,
-  jsxParserComponentsByVersion: Record<string, any>
-) {
-  const [isStylesLoaded, setIsStylesLoaded] = useState(false);
-  const [code, setCode] = useState("");
-  const [localCode, setLocalCode] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const [versions, setVersions] = useState<any[]>([]);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [editingMode, setEditingMode] = useState<"builder" | "code">("builder");
-  const [activeVersionId, setActiveVersionId] = useState<number | null>(null);
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid";
+
+import { useAntdVersion } from "@/context/AntdVersionContext";
+import { jsxParserComponentsByVersion } from "@/constants/antd/jsxParserComponentsByVersion";
+import { fetchGeneratedCode } from "@/utils/generateCode";
+
+import {
+  parseInputsFromCodeInOrder,
+  getRootName,
+} from "@/utils/formBuilderUtils";
+import { useVersions } from "./useVersions";
+import { useBlockEditing, ParsedBlock } from "./useBlockEditing";
+
+interface SimpleInputItem {
+  id: string;
+  label: string;
+}
+
+export function useFormBuilderLogic() {
+  const { antdVersion, getBaseCode } = useAntdVersion();
+  const components = jsxParserComponentsByVersion[antdVersion];
+  const previewRef = useRef<HTMLDivElement | null>(null);
+
+  // Estados UI y lógicos
+  const [code, setCode] = useState<string>("");
   const [showCode, setShowCode] = useState(false);
+  const [editingMode, setEditingMode] = useState<"builder" | "code">("builder");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showVersionWarning, setShowVersionWarning] = useState(false);
-  const [prevAntdVersion, setPrevAntdVersion] = useState<AntdVersion | null>(
-    null
-  );
-  const previewRef = useRef<HTMLDivElement>(null);
+  const [prevAntdVersion, setPrevAntdVersion] = useState<string | null>(null);
+  const [isStylesLoaded, setIsStylesLoaded] = useState(false);
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
 
-  const activeVersion = versions.find((v) => v.id === activeVersionId);
-  const components = jsxParserComponentsByVersion[antdVersion];
+  // Estado del prompt para generación AI
+  const [prompt, setPrompt] = useState("");
 
-  // --- Nuevo: manejo inputs para InputList ---
-  const parseInputsFromCode = useCallback((codeStr: string) => {
-    const regex = /<Form\.Item[^>]*>([\s\S]*?)<\/Form\.Item>/g;
-    const matches = [];
-    let match;
-    while ((match = regex.exec(codeStr))) {
-      matches.push(match[0]);
-    }
-    return matches;
-  }, []);
-
-  const inputsBlocks = parseInputsFromCode(localCode);
-
-  const inputs = inputsBlocks.map((block, i) => ({
-    id: `input-${i}`,
-    label: block.match(/name="([^"]+)"/)?.[1] || `Input ${i + 1}`,
-  }));
-
-  const reorderCodeByInputIds = useCallback(
-    (newOrder: string[]) => {
-      const idToBlock: Record<string, string> = {};
-      inputs.forEach(({ id }, idx) => {
-        idToBlock[id] = inputsBlocks[idx];
-      });
-
-      const reorderedBlocks = newOrder
-        .map((id) => idToBlock[id])
-        .filter(Boolean);
-
-      const newCode = reorderedBlocks.join("\n");
-
-      setLocalCode(newCode);
-      setCode(newCode);
-      setHasUnsavedChanges(true);
-    },
-    [inputs, inputsBlocks]
+  // Parsear bloques en orden (recalcula al cambiar código)
+  const parsedBlocks: ParsedBlock[] = useMemo(
+    () => parseInputsFromCodeInOrder(code),
+    [code]
   );
 
+  // Hook para manejar id->block, actualización y sincronización
+  const {
+    idToBlockRef,
+    syncIdToBlockMap,
+    getCodeBlockByInputId,
+    reorderCodeByInputIds,
+    handleUpdateInput,
+    getUniqueCode,
+  } = useBlockEditing(parsedBlocks);
+
+  // Hook para versiones
+  const {
+    versions,
+    setVersions,
+    activeVersionId,
+    setActiveVersionId,
+    handleVersionChange,
+    handleSave,
+    handleDeleteVersion,
+  } = useVersions();
+
+  // Sincronizar mapa id->block cuando cambian parsedBlocks
   useEffect(() => {
-    if (document.readyState === "complete") {
-      setIsStylesLoaded(true);
-    } else {
+    syncIdToBlockMap();
+  }, [parsedBlocks, syncIdToBlockMap]);
+
+  // Construir inputs: id + label, basado en parsedBlocks y mapa id->block
+  const inputs = useMemo<SimpleInputItem[]>(() => {
+    const arr: SimpleInputItem[] = [];
+    const map = idToBlockRef.current;
+
+    for (const { block } of parsedBlocks) {
+      let foundId: string | undefined;
+      // Buscar id por bloque exacto
+      for (const [id, b] of map.entries()) {
+        if (b === block) {
+          foundId = id;
+          break;
+        }
+      }
+      // Si no existe id, crear uno y agregar al mapa
+      if (!foundId) {
+        foundId = uuidv4();
+        map.set(foundId, block);
+      }
+
+      // Etiqueta del input, priorizando nombre o label dentro del bloque
+      const root = getRootName(block);
+      let label = root || "Bloque";
+      if (root === "Form.Item") {
+        label =
+          block.match(/name="([^"]+)"/)?.[1] ||
+          block.match(/label="([^"]+)"/)?.[1] ||
+          "Form.Item";
+      }
+
+      arr.push({ id: foundId, label });
+    }
+
+    return arr;
+  }, [parsedBlocks, idToBlockRef]);
+
+  // Efecto para detectar cambio de versión menor a mayor (mostrar warning)
+  useEffect(() => {
+    if (prevAntdVersion && antdVersion < prevAntdVersion)
+      setShowVersionWarning(true);
+    setPrevAntdVersion(antdVersion);
+  }, [antdVersion, prevAntdVersion]);
+
+  // Efecto para cargar estilos (ej: esperar a que cargue la página)
+  useEffect(() => {
+    if (document.readyState === "complete") setIsStylesLoaded(true);
+    else {
       const onLoad = () => setIsStylesLoaded(true);
       window.addEventListener("load", onLoad);
       return () => window.removeEventListener("load", onLoad);
     }
   }, []);
 
+  // Efecto para cargar código base si está vacío (ej: al cambiar versión)
   useEffect(() => {
-    if (prevAntdVersion && antdVersion < prevAntdVersion) {
-      setShowVersionWarning(true);
+    if (!code.trim()) {
+      const base = getBaseCode(antdVersion);
+      setCode(base);
     }
-    setPrevAntdVersion(antdVersion);
-  }, [antdVersion]);
+  }, [antdVersion, code, getBaseCode]);
 
+  // Efecto para comparar código actual con versión activa y marcar cambios
   useEffect(() => {
-    const baseCode = getBaseCode(antdVersion);
-    setCode(baseCode);
-  }, [antdVersion, getBaseCode]);
+    const activeVersion = versions.find((v) => v.id === activeVersionId);
+    setHasUnsavedChanges(code.trim() !== (activeVersion?.code || "").trim());
+  }, [code, activeVersionId, versions]);
 
+  // Controlar overflow del body según preview expandido
   useEffect(() => {
-    setLocalCode(code);
-  }, [code]);
+    document.body.style.overflow = isPreviewExpanded ? "hidden" : "";
+  }, [isPreviewExpanded]);
 
-  useEffect(() => {
-    const trimmedLocal = localCode.trim();
-    const trimmedCurrent = (activeVersion?.code || code).trim();
-    setHasUnsavedChanges(trimmedLocal !== trimmedCurrent);
-  }, [localCode, activeVersion, code]);
+  // Wrappers que usan setters internos para reorder y update
+  const reorderCodeByInputIdsWrapped = useCallback(
+    (newOrder: string[]) =>
+      reorderCodeByInputIds(newOrder, setCode, setHasUnsavedChanges),
+    [reorderCodeByInputIds]
+  );
 
-  const handleInsert = (insertedCode: string, label: string) => {
-    const baseName = label.toLowerCase().replace(/\s+/g, "");
-    const regex = new RegExp(`${baseName}(\\d*)`, "g");
-    const matches = Array.from(localCode.matchAll(regex)).map((m) =>
-      m[1] ? parseInt(m[1]) : 0
-    );
-    const nextIndex = Math.max(0, ...matches) + 1;
-    const uniqueName = `${baseName}${nextIndex}`;
-    const updated = insertedCode.replace(
-      /name="[^"]*"/,
-      `name="${uniqueName}"`
-    );
-    setLocalCode((prev) => prev + "\n" + updated);
-    setHasUnsavedChanges(true);
-  };
+  const handleUpdateInputWrapped = useCallback(
+    (inputId: string, newCodeBlock: string) => {
+      return handleUpdateInput(
+        inputId,
+        newCodeBlock,
+        parsedBlocks,
+        setCode,
+        setHasUnsavedChanges
+      );
+    },
+    [handleUpdateInput, parsedBlocks]
+  );
 
-  const handleSave = () => {
-    const maxId = versions.length ? Math.max(...versions.map((v) => v.id)) : 0;
-    const newVersion = {
-      id: maxId + 1,
-      prompt: "Manual edit",
-      code: localCode,
-      messages: activeVersion?.messages || [],
-    };
-    setVersions([...versions, newVersion]);
-    setCode(localCode);
-    setActiveVersionId(newVersion.id);
-    setHasUnsavedChanges(false);
-  };
+  // Wrappers para control de versiones (manejan setters)
+  const handleVersionChangeWrapped = useCallback(
+    (id: number | null) =>
+      handleVersionChange(id, setCode, setEditingMode, setHasUnsavedChanges),
+    [handleVersionChange]
+  );
 
-  const handleCancel = () => {
-    setLocalCode(activeVersion?.code || code);
+  const handleSaveWrapped = useCallback(
+    () => handleSave(code, "Manual edit", setHasUnsavedChanges),
+    [handleSave, code]
+  );
+
+  const handleDeleteVersionWrapped = useCallback(
+    (id: number) =>
+      handleDeleteVersion(id, setCode, handleVersionChangeWrapped),
+    [handleDeleteVersion, handleVersionChangeWrapped]
+  );
+
+  // Funciones adicionales del builder (cancelar, limpiar, descargar, generar)
+  const handleCancel = useCallback(() => {
+    const activeVersion = versions.find((v) => v.id === activeVersionId);
+    setCode(activeVersion?.code || getBaseCode(antdVersion));
     setHasUnsavedChanges(false);
     setEditingMode("builder");
-  };
+  }, [activeVersionId, versions, getBaseCode, antdVersion]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setCode("");
-    setLocalCode("");
     setHasUnsavedChanges(true);
-  };
+  }, []);
 
-  const handleVersionChange = (id: number) => {
-    const version = versions.find((v) => v.id === id);
-    if (version) {
-      setActiveVersionId(id);
-      setCode(version.code);
-      setLocalCode(version.code);
-      setEditingMode("builder");
-      setHasUnsavedChanges(false);
-    }
-  };
-
-  const handleDownloadImage = async () => {
+  const handleDownloadImage = useCallback(async () => {
     if (!previewRef.current) return;
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(previewRef.current, {
         cacheBust: true,
-        backgroundColor: "#ffffff",
+        backgroundColor: "#fff",
         pixelRatio: 2,
       });
       const link = document.createElement("a");
       link.download = `form-version-${activeVersionId ?? "latest"}.png`;
       link.href = dataUrl;
       link.click();
-    } catch (err) {
-      console.error("Image export failed", err);
-      message.error("No se pudo exportar la imagen.");
+    } catch {
+      alert("No se pudo exportar la imagen.");
     }
-  };
+  }, [activeVersionId]);
+
+  const onGenerateCode = useCallback(async () => {
+    if (!prompt.trim()) return alert("Prompt vacío");
+    setIsGenerating(true);
+    try {
+      await fetchGeneratedCode(
+        prompt,
+        code,
+        versions.find((v) => v.id === activeVersionId),
+        versions,
+        ({ code: newCode, messages, newVersionId }) => {
+          setCode(newCode);
+          setVersions((prev) => [
+            ...prev,
+            { id: newVersionId, prompt, code: newCode, messages },
+          ]);
+          setActiveVersionId(newVersionId);
+          setPrompt("");
+          setShowCode(false);
+          setEditingMode("builder");
+          setHasUnsavedChanges(false);
+        }
+      );
+    } catch (e) {
+      alert("Error al generar: " + e);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [
+    prompt,
+    code,
+    versions,
+    activeVersionId,
+    setVersions,
+    setActiveVersionId,
+  ]);
 
   return {
-    code,
-    setCode,
-    localCode,
-    setLocalCode,
+    previewRef,
+    components,
+    isStylesLoaded,
     prompt,
     setPrompt,
+    code,
+    setCode,
     versions,
     setVersions,
     activeVersionId,
-    setActiveVersionId,
-    hasUnsavedChanges,
-    setHasUnsavedChanges,
-    editingMode,
-    setEditingMode,
     showCode,
     setShowCode,
+    editingMode,
+    setEditingMode,
+    hasUnsavedChanges,
     isGenerating,
-    setIsGenerating,
     showVersionWarning,
     setShowVersionWarning,
-    previewRef,
-    activeVersion,
-    components,
-    handleInsert,
-    handleSave,
+    isPreviewExpanded,
+    setIsPreviewExpanded,
+    inputs,
+
+    reorderCodeByInputIds: reorderCodeByInputIdsWrapped,
+    handleUpdateInput: handleUpdateInputWrapped,
+    getUniqueCode,
+    getCodeBlockByInputId,
+
+    handleVersionChange: handleVersionChangeWrapped,
+    handleSave: handleSaveWrapped,
+    handleDeleteVersion: handleDeleteVersionWrapped,
     handleCancel,
     handleClear,
-    handleVersionChange,
     handleDownloadImage,
-    isStylesLoaded,
-    inputs,
-    reorderCodeByInputIds,
+    onGenerateCode,
   };
 }

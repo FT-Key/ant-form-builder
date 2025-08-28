@@ -1,18 +1,42 @@
 "use client";
-import { Button, Alert } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+
+import { Button, Alert, Modal } from "antd";
+import {
+  DeleteOutlined,
+  ArrowsAltOutlined,
+  ShrinkOutlined,
+} from "@ant-design/icons";
 
 export default function EditActions({
   hasUnsavedChanges,
   onSave,
   onCancel,
   onClear,
+  isPreviewExpanded,
+  setIsPreviewExpanded,
+  isPreviewVisible,
 }: {
   hasUnsavedChanges: boolean;
   onSave: () => void;
   onCancel: () => void;
   onClear: () => void;
+  isPreviewExpanded: boolean;
+  setIsPreviewExpanded: (value: boolean) => void;
+  isPreviewVisible: boolean;
 }) {
+  const showConfirmClear = () => {
+    Modal.confirm({
+      title: "¿Estás seguro de que quieres limpiar el código?",
+      content: "Esta acción no se puede deshacer.",
+      okText: "Sí, limpiar",
+      okType: "danger",
+      cancelText: "Cancelar",
+      onOk() {
+        onClear();
+      },
+    });
+  };
+
   return (
     <div className="mt-4">
       <div className="flex justify-between items-center gap-4 flex-wrap">
@@ -35,9 +59,19 @@ export default function EditActions({
           </Button>
         </div>
 
-        <Button danger icon={<DeleteOutlined />} onClick={onClear}>
-          Clear Code
-        </Button>
+        <div className="flex gap-2">
+          <Button danger icon={<DeleteOutlined />} onClick={showConfirmClear} />
+
+          {isPreviewVisible && (
+            <Button
+              type="default"
+              icon={
+                isPreviewExpanded ? <ShrinkOutlined /> : <ArrowsAltOutlined />
+              }
+              onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
+            />
+          )}
+        </div>
       </div>
 
       {hasUnsavedChanges && (

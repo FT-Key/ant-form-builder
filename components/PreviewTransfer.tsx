@@ -6,13 +6,36 @@ import { Transfer, Input, FormInstance, Form } from "antd";
 interface PreviewTransferProps {
   form?: FormInstance;
   name?: string;
+  dataSource?: {
+    key: string;
+    title: string;
+    description?: string;
+    disabled?: boolean;
+  }[];
+  oneWay?: boolean;
+  disabled?: boolean;
+  showSearch?: boolean;
+  id?: string;
 }
 
 export default function PreviewTransfer({
   form,
   name = "transfer",
+  dataSource = [],
+  oneWay = false,
+  disabled = false,
+  showSearch = false,
+  id,
 }: PreviewTransferProps) {
   const [targetKeys, setTargetKeys] = useState<string[]>([]);
+
+  // DataSource por defecto para evitar lista vacía
+  const defaultDataSource = [
+    { key: "1", title: "Option 1" },
+    { key: "2", title: "Option 2" },
+  ];
+
+  const dataSrc = dataSource.length > 0 ? dataSource : defaultDataSource;
 
   useEffect(() => {
     if (form) {
@@ -21,11 +44,11 @@ export default function PreviewTransfer({
   }, [targetKeys, form, name]);
 
   const onChange = (
-    targetKeys: React.Key[],
+    keys: React.Key[],
     direction: "left" | "right",
     moveKeys: React.Key[]
   ) => {
-    const stringKeys = targetKeys.map(String);
+    const stringKeys = keys.map(String);
     setTargetKeys(stringKeys);
 
     if (form) {
@@ -33,21 +56,19 @@ export default function PreviewTransfer({
     }
   };
 
-  const dataSource = [
-    { key: "1", title: "Option 1" },
-    { key: "2", title: "Option 2" },
-    { key: "3", title: "Option 3" },
-  ];
-
   return (
     <>
-      <Transfer
-        dataSource={dataSource}
-        targetKeys={targetKeys}
-        render={(item) => item.title}
-        onChange={onChange}
-        showSearch
-      />
+      <div id={id}>
+        <Transfer
+          dataSource={dataSource}
+          targetKeys={targetKeys}
+          render={(item) => item.title}
+          onChange={onChange}
+          showSearch={showSearch}
+          disabled={disabled}
+          oneWay={oneWay}
+        />
+      </div>
       {form && (
         <Form.Item name={name} hidden>
           <Input />
