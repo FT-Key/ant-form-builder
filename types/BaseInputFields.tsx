@@ -24,14 +24,12 @@ export interface BaseInputFields {
   // Validaciones numéricas
   minLength?: number;
   maxLength?: number;
-  rows?: number; // <--- Agregado para TextArea
+  rows?: number; // TextArea
 
   // Booleanos adicionales
   allowClear?: boolean;
   showCount?: boolean;
-  autoSize?: boolean; // <--- Agregado para TextArea
-
-  // Visibilidad
+  autoSize?: boolean; // TextArea
   visibilityToggle?: boolean;
 
   // Number
@@ -42,7 +40,7 @@ export interface BaseInputFields {
   keyboard?: boolean;
   controls?: boolean;
 
-  // 🔽 Select-specific
+  // Select
   mode?: "" | "multiple" | "tags";
   options?: { label: string; value: string }[];
   optionFilterProp?: string;
@@ -50,4 +48,39 @@ export interface BaseInputFields {
   maxTagCount?: number;
   loading?: boolean;
   showSearch?: boolean;
+
+  // Select avanzados
+  dropdownMatchSelectWidth?: boolean | number;
+  labelInValue?: boolean;
+  optionLabelProp?: string;
+  defaultActiveFirstOption?: boolean;
+  virtual?: boolean;
+  bordered?: boolean;
+  showArrow?: boolean;
+  open?: boolean;
+  notFoundContent?: string;
+  dropdownStyle?: string; // ⬅️ cambiado a string
+  dropdownClassName?: string;
+  listHeight?: number;
+  listItemHeight?: number;
+  placement?: "bottomLeft" | "bottomRight" | "topLeft" | "topRight";
+
+  // Rate
+  allowHalf?: boolean;
+  tooltips?: boolean; // ⬅️ cambiado a boolean
+  character?: React.ReactNode;
+
+  // Slider
+  dots?: boolean;
+  range?: boolean; // ⬅️ cambiado a boolean
+
+  // Date/Time
+  picker?: "date" | "week" | "month" | "quarter" | "year" | "time";
+  showTime?: boolean; // ⬅️ cambiado a boolean
+  format?: string;
+  use12Hours?: boolean;
+
+  // TimePicker específicos
+  minuteStep?: number;
+  secondStep?: number;
 }

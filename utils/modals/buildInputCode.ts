@@ -22,19 +22,9 @@ export function buildInputCode(
     if (value === undefined || value === "") continue;
     if (skipInnerProps.has(key)) continue;
 
-    // Casos especiales
-    if (
-      (key === "controls" || key === "keyboard") &&
-      typeof value === "boolean"
-    ) {
-      props.push(`${key}={${value}}`);
-      continue;
-    }
-
-    // Booleanos normales
+    // Booleanos especiales o normales
     if (typeof value === "boolean") {
-      // Aquí agregamos visibilidad explícitamente
-      if (key === "visibilityToggle") {
+      if (["controls", "keyboard", "visibilityToggle"].includes(key)) {
         props.push(`${key}={${value}}`);
       } else if (value === true) {
         props.push(key);
@@ -44,18 +34,26 @@ export function buildInputCode(
 
     // Números que van entre llaves
     if (
-      (key === "minLength" ||
-        key === "maxLength" ||
-        key === "rows" ||
-        key === "cols") &&
+      [
+        "minuteStep",
+        "secondStep",
+        "step",
+        "precision",
+        "min",
+        "max",
+        "rows",
+        "cols",
+        "listHeight",
+        "listItemHeight",
+        "maxTagCount",
+      ].includes(key) &&
       typeof value === "number"
     ) {
       props.push(`${key}={${value}}`);
       continue;
     }
 
-    if (key === "size" && value === "middle") continue;
-
+    // Strings normales
     props.push(`${key}="${value}"`);
   }
 

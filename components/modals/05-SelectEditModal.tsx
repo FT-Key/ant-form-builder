@@ -45,39 +45,20 @@ export default function SelectEditModal({
     size: "middle",
     status: "",
     inputId: "",
-    addonBefore: "",
-    addonAfter: "",
-    prefix: "",
-    suffix: "",
     className: "",
-    minLength: undefined,
-    maxLength: undefined,
     allowClear: false,
     showSearch: false,
     mode: "",
     options: [],
   });
 
-  // --- useCollapse para Advanced ---
+  // Collapse hooks
   const {
     activePanels: activeAdvancedPanels,
     setActivePanels: setActiveAdvancedPanels,
     validateAndOpen: validateAndOpenAdvanced,
-  } = useCollapsePanels(
-    [],
-    [
-      "errorAddonBefore",
-      "errorAddonAfter",
-      "errorPrefix",
-      "errorSuffix",
-      "errorId",
-      "errorSize",
-      "errorStatus",
-      "errorClassName",
-    ]
-  );
+  } = useCollapsePanels([], ["errorAllowClear", "errorShowSearch"]);
 
-  // --- useCollapse para Options ---
   const {
     activePanels: activeOptionPanels,
     setActivePanels: setActiveOptionPanels,
@@ -123,38 +104,58 @@ export default function SelectEditModal({
     const matchBool = (attr: string) =>
       new RegExp(`\\b${attr}\\b`).test(codeBlock);
 
+    const rawPlacement = matchAttr("placement");
+    const validPlacements = [
+      "bottomLeft",
+      "bottomRight",
+      "topLeft",
+      "topRight",
+    ] as const;
+
     setLocalFields((prev) => ({
       ...prev,
+      // básicos
       label: matchAttr("label"),
       name: matchAttr("name"),
       placeholder: matchAttr("placeholder"),
       inputId: matchAttr("id"),
-      addonBefore: matchAttr("addonBefore"),
-      addonAfter: matchAttr("addonAfter"),
-      prefix: matchAttr("prefix"),
-      suffix: matchAttr("suffix"),
       className: matchAttr("className"),
       disabled: matchBool("disabled"),
       readOnly: matchBool("readOnly"),
       autoFocus: matchBool("autoFocus"),
+      // select básicos
       allowClear: matchBool("allowClear"),
       showSearch: matchBool("showSearch"),
-      size:
-        codeBlock.match(/size="(large|middle|small)"/)?.[1] === "large"
-          ? "large"
-          : codeBlock.match(/size="(large|middle|small)"/)?.[1] === "small"
-          ? "small"
-          : "middle",
-      status:
-        codeBlock.match(/status="(error|warning)"/)?.[1] === "error"
-          ? "error"
-          : codeBlock.match(/status="(error|warning)"/)?.[1] === "warning"
-          ? "warning"
-          : "",
       mode:
         (codeBlock.match(/mode="(multiple|tags)"/)?.[1] as
           | "multiple"
           | "tags") || "",
+      // select avanzados
+      filterOption: !/filterOption={false}/.test(codeBlock),
+      loading: matchBool("loading"),
+      optionFilterProp: matchAttr("optionFilterProp"),
+      maxTagCount: Number(matchAttr("maxTagCount")) || undefined,
+      dropdownMatchSelectWidth: !/dropdownMatchSelectWidth={false}/.test(
+        codeBlock
+      ),
+      labelInValue: matchBool("labelInValue"),
+      optionLabelProp: matchAttr("optionLabelProp"),
+      defaultActiveFirstOption: !/defaultActiveFirstOption={false}/.test(
+        codeBlock
+      ),
+      virtual: !/virtual={false}/.test(codeBlock),
+      bordered: !/bordered={false}/.test(codeBlock),
+      showArrow: !/showArrow={false}/.test(codeBlock),
+      open: matchBool("open"),
+      notFoundContent: matchAttr("notFoundContent"),
+      dropdownStyle: matchAttr("dropdownStyle"),
+      dropdownClassName: matchAttr("dropdownClassName"),
+      listHeight: Number(matchAttr("listHeight")) || undefined,
+      listItemHeight: Number(matchAttr("listItemHeight")) || undefined,
+      placement: validPlacements.includes(rawPlacement as any)
+        ? (rawPlacement as (typeof validPlacements)[number])
+        : undefined,
+      // opciones
       options: Array.from(
         codeBlock.matchAll(
           /<Select\.Option value="([^"]+)">([^<]+)<\/Select\.Option>/g
@@ -166,9 +167,7 @@ export default function SelectEditModal({
   const handleSave = () => {
     const currentErrors = validateAndSave();
 
-    // abrir panel Advanced si hay errores
     validateAndOpenAdvanced(currentErrors);
-    // abrir panel Options si hay errores
     validateAndOpenOptions(currentErrors);
 
     const hasAnyErrors = Object.keys(currentErrors).some(
@@ -244,7 +243,7 @@ export default function SelectEditModal({
           activeKey={activeAdvancedPanels}
           onChange={(keys) => setActiveAdvancedPanels(keys as string[])}
         >
-          <Panel header="Opciones avanzadas" key="1">
+          <Panel header="Opciones avanzadas" key="advanced">
             <AdvancedFields
               fields={localFields}
               setField={(key, value) =>
@@ -252,16 +251,26 @@ export default function SelectEditModal({
               }
               errors={errors}
               show={[
-                "addonBefore",
-                "addonAfter",
-                "prefix",
-                "suffix",
-                "inputId",
-                "className",
-                "size",
-                "status",
                 "allowClear",
                 "showSearch",
+                "filterOption",
+                "loading",
+                "optionFilterProp",
+                "maxTagCount",
+                "dropdownMatchSelectWidth",
+                "labelInValue",
+                "optionLabelProp",
+                "defaultActiveFirstOption",
+                "virtual",
+                "bordered",
+                "showArrow",
+                "open",
+                "notFoundContent",
+                "dropdownStyle",
+                "dropdownClassName",
+                "listHeight",
+                "listItemHeight",
+                "placement",
               ]}
               allowClear={localFields.allowClear}
               setAllowClear={(v) =>
