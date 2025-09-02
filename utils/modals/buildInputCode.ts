@@ -3,7 +3,8 @@ import { BaseInputFields } from "@/types/BaseInputFields";
 export function buildInputCode(
   fields: BaseInputFields,
   extraProps: Record<string, any> = {},
-  component = "Input"
+  component = "Input",
+  namespace?: string
 ) {
   const props: string[] = [];
 
@@ -14,7 +15,7 @@ export function buildInputCode(
   };
   delete mappedFields.inputId;
 
-  const { options, ...rest } = mappedFields;
+  const { options, innerText, ...rest } = mappedFields; // <-- extraemos innerText
 
   const skipInnerProps = new Set(["label", "name"]);
 
@@ -71,14 +72,38 @@ export function buildInputCode(
       )
       .join("\n");
 
-    return `<Form.Item ${formItemAttrs.join(" ")}>
-    <Select ${props.join(" ")}>
+    return `<Form.Item ${formItemAttrs.join(" ")} >
+    <Select ${props.join(" ")} >
 ${children}
     </Select>
   </Form.Item>`;
   }
 
-  return `<Form.Item ${formItemAttrs.join(" ")}>
-    <${component} ${props.join(" ")} />
+  // Determinar el componente completo
+  let fullComponent = component;
+  if (namespace) {
+    fullComponent = `${namespace}.${component}`;
+  } else if (component === "RangePicker") {
+    fullComponent = `DatePicker.RangePicker`;
+    if (fields.formatDate) props.push(`format="${fields.formatDate}"`);
+    if (fields.className) props.push(`className="${fields.className}"`);
+  } else if (component === "TimePicker") {
+    fullComponent = `TimePicker`;
+    if (fields.formatTime) props.push(`format="${fields.formatTime}"`);
+    if (fields.className) props.push(`className="${fields.className}"`);
+  } else {
+    if (fields.className) props.push(`className="${fields.className}"`);
+  }
+
+  // 🔹 Ajuste para innerText
+  const hasInnerText = typeof innerText === "string" && innerText.trim() !== "";
+  if (hasInnerText) {
+    return `<Form.Item ${formItemAttrs.join(" ")} >
+    <${fullComponent} ${props.join(" ")}>${innerText}</${fullComponent}>
+  </Form.Item>`;
+  }
+
+  return `<Form.Item ${formItemAttrs.join(" ")} >
+    <${fullComponent} ${props.join(" ")} />
   </Form.Item>`;
 }

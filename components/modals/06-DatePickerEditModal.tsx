@@ -40,7 +40,8 @@ export default function DatePickerEditModal({
     className: "",
     allowClear: true,
     showTime: false,
-    format: "",
+    formatDate: undefined, // ⬅️ undefined en vez de ""
+    formatTime: undefined, // ⬅️ undefined en vez de ""
     use12Hours: false,
     picker: "date",
   });
@@ -64,24 +65,27 @@ export default function DatePickerEditModal({
     if (!open) return;
 
     const matchAttr = (attr: string) =>
-      codeBlock.match(new RegExp(`${attr}="([^"]*)"`))?.[1] || "";
+      codeBlock.match(new RegExp(`${attr}="([^"]*)"`))?.[1];
 
     const matchBool = (attr: string) =>
       new RegExp(`\\b${attr}\\b`).test(codeBlock);
 
     setLocalFields((prev) => ({
       ...prev,
-      label: matchAttr("label"),
-      name: matchAttr("name"),
-      placeholder: matchAttr("placeholder"),
-      inputId: matchAttr("id"),
-      format: matchAttr("format"),
-      className: matchAttr("className"),
+      label: matchAttr("label") ?? "",
+      name: matchAttr("name") ?? "",
+      placeholder: matchAttr("placeholder") ?? "",
+      inputId: matchAttr("id") ?? "",
+      className: matchAttr("className") ?? "",
       disabled: matchBool("disabled"),
       autoFocus: matchBool("autoFocus"),
       allowClear: !/allowClear=\{false\}/.test(codeBlock),
       showTime: matchBool("showTime"),
       use12Hours: matchBool("use12Hours"),
+      picker:
+        (codeBlock.match(
+          /picker="(date|week|month|quarter|year|time)"/
+        )?.[1] as BaseInputFields["picker"]) || "date",
       size:
         codeBlock.match(/size="(large|middle|small)"/)?.[1] === "large"
           ? "large"
@@ -94,10 +98,14 @@ export default function DatePickerEditModal({
           : codeBlock.match(/status="(error|warning)"/)?.[1] === "warning"
           ? "warning"
           : "",
-      picker:
-        (codeBlock.match(
-          /picker="(date|week|month|quarter|year)"/
-        )?.[1] as BaseInputFields["picker"]) || "date",
+      formatDate:
+        (matchAttr("formatDate") as BaseInputFields["formatDate"]) ??
+        (matchAttr("format") as BaseInputFields["formatDate"]) ??
+        undefined,
+      formatTime:
+        (matchAttr("formatTime") as BaseInputFields["formatTime"]) ??
+        (matchAttr("format") as BaseInputFields["formatTime"]) ??
+        undefined,
     }));
   }, [open, codeBlock]);
 
@@ -171,7 +179,7 @@ export default function DatePickerEditModal({
                 "className",
                 "allowClear",
                 "showTime",
-                "format",
+                "formatDate",
                 "use12Hours",
                 "picker",
               ]}

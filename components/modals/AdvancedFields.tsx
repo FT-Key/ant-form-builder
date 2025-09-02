@@ -2,6 +2,7 @@
 
 import { Input, Select, Checkbox } from "antd";
 import { BaseInputFields } from "@/types/BaseInputFields";
+import { DateTimeAdvancedFields } from "./advanced/DateTimeAdvancedFields";
 
 const { Option } = Select;
 
@@ -364,50 +365,15 @@ export function AdvancedFields({
       )}
       {show.includes("tooltips") && (
         <Checkbox
-          checked={fields.tooltips}
-          onChange={(e) => setField("tooltips", e.target.checked)}
+          checked={!!fields.tooltipsEnabled}
+          onChange={(e) => setField("tooltipsEnabled", e.target.checked)}
         >
           tooltips
         </Checkbox>
       )}
 
-      {/* ---- DatePicker / TimePicker / RangePicker ---- */}
-      {show.includes("picker") && (
-        <Select
-          value={fields.picker}
-          onChange={(v) => setField("picker", v)}
-          style={{ width: "100%" }}
-        >
-          <Option value="date">date</Option>
-          <Option value="week">week</Option>
-          <Option value="month">month</Option>
-          <Option value="quarter">quarter</Option>
-          <Option value="year">year</Option>
-        </Select>
-      )}
-      {show.includes("showTime") && (
-        <Checkbox
-          checked={fields.showTime || false}
-          onChange={(e) => setField("showTime", e.target.checked)}
-        >
-          showTime
-        </Checkbox>
-      )}
-      {show.includes("format") && (
-        <Input
-          value={fields.format || ""}
-          onChange={(e) => setField("format", e.target.value)}
-          addonBefore="format"
-        />
-      )}
-      {show.includes("use12Hours") && (
-        <Checkbox
-          checked={fields.use12Hours || false}
-          onChange={(e) => setField("use12Hours", e.target.checked)}
-        >
-          use12Hours
-        </Checkbox>
-      )}
+      {/* ---- DatePicker / TimePicker / RangePicker (delegado) ---- */}
+      <DateTimeAdvancedFields show={show} fields={fields} setField={setField} />
 
       {/* ---- Generales (id, className, size, status) ---- */}
       {show.includes("inputId") && (
@@ -450,33 +416,22 @@ export function AdvancedFields({
           status={errors["errorClassName"] ? "error" : undefined}
         />
       )}
-
-      {show.includes("minuteStep") && (
-        <Input
-          type="number"
-          value={fields.minuteStep ?? ""}
-          onChange={(e) =>
-            setField(
-              "minuteStep",
-              e.target.value === "" ? undefined : Number(e.target.value)
-            )
-          }
-          addonBefore="minuteStep"
-        />
+      {show.includes("checked") && (
+        <Checkbox
+          checked={!!fields.checked} // forzamos a booleano
+          onChange={(e) => setField("checked", e.target.checked)}
+        >
+          checked
+        </Checkbox>
       )}
-
-      {show.includes("secondStep") && (
-        <Input
-          type="number"
-          value={fields.secondStep ?? ""}
-          onChange={(e) =>
-            setField(
-              "secondStep",
-              e.target.value === "" ? undefined : Number(e.target.value)
-            )
-          }
-          addonBefore="secondStep"
-        />
+      {show.includes("indeterminate") && (
+        <Checkbox
+          indeterminate={!!fields.indeterminate}
+          checked={!!fields.indeterminate}
+          onChange={(e) => setField("indeterminate", e.target.checked)}
+        >
+          indeterminate
+        </Checkbox>
       )}
     </div>
   );

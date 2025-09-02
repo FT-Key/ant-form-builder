@@ -21,6 +21,21 @@ export function BasicFields({
 }: BasicFieldsProps) {
   return (
     <div className="space-y-3">
+      {show.includes("innerText") && (
+        <>
+          <Input
+            value={fields.innerText}
+            onChange={(e) => setField("innerText", e.target.value)}
+            placeholder="Texto del checkbox"
+            addonBefore="innerText"
+            status={errors["errorInnerText"] ? "error" : undefined}
+          />
+          {errors["errorInnerText"] && (
+            <div className="text-red-500">{errors["errorInnerText"]}</div>
+          )}
+        </>
+      )}
+
       {show.includes("label") && (
         <>
           <Input

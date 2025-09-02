@@ -6,62 +6,83 @@ export interface ValidationParams {
   onSave: (code: string) => void;
   buildCode: () => string;
 
-  // Campos opcionales: el modal decide cuáles enviar
+  // comunes
+  innerText?: string;
   label?: string;
   name?: string;
   placeholder?: string;
+  id?: string;
+  className?: string;
+
+  // numéricos
   minLength?: number;
   maxLength?: number;
   min?: number;
   max?: number;
+  maxTagCount?: number;
+  listHeight?: number;
+  listItemHeight?: number;
+  step?: number;
+  precision?: number;
+  minuteStep?: number;
+  secondStep?: number;
+
+  // strings adicionales
   addonBefore?: string;
   addonAfter?: string;
   prefix?: string;
   suffix?: string;
-  id?: string;
+  optionFilterProp?: string;
+  optionLabelProp?: string;
+  notFoundContent?: string;
+  dropdownStyle?: string;
+  dropdownClassName?: string;
+
+  // selects restringidos
   size?: "small" | "middle" | "large";
   status?: "" | "error" | "warning";
-  className?: string;
-  type?: "default" | "primary" | "dashed" | "text" | "link";
+  placement?: "bottomLeft" | "bottomRight" | "topLeft" | "topRight";
+  mode?: "" | "multiple" | "tags";
+  formatDate?: string;
+  formatTime?: string;
+
+  // booleans (check/flags)
   block?: boolean;
   danger?: boolean;
   loading?: boolean;
   disabled?: boolean;
+  visibilityToggle?: boolean;
+  autoSize?: boolean;
+  showCount?: boolean;
+  allowClear?: boolean;
+  showSearch?: boolean;
+  filterOption?: boolean;
+  dropdownMatchSelectWidth?: boolean | number;
+  labelInValue?: boolean;
+  defaultActiveFirstOption?: boolean;
+  virtual?: boolean;
+  bordered?: boolean;
+  showArrow?: boolean;
+  open?: boolean;
+  keyboard?: boolean;
+  controls?: boolean;
+  dots?: boolean;
+  range?: boolean;
+  allowHalf?: boolean;
+  tooltips?: boolean | React.ReactNode[];
+  use12Hours?: boolean;
+  checked?: boolean;
+  indeterminate?: boolean;
 
-  // Campos específicos de Select
-  mode?: "" | "multiple" | "tags";
-  optionFilterProp?: string;
-  maxTagCount?: number;
+  // options para <Select>
+  options?: { label: string; value: string }[];
+
+  // Button
+  type?: "default" | "primary" | "dashed" | "text" | "link";
 }
 
-export function useInputValidation(
-  params: ValidationParams & { options?: { label: string; value: string }[] }
-) {
-  const {
-    onSave,
-    buildCode,
-    label,
-    name,
-    placeholder,
-    minLength,
-    maxLength,
-    min,
-    max,
-    addonBefore,
-    addonAfter,
-    prefix,
-    suffix,
-    id,
-    size,
-    status,
-    className,
-    type,
-    mode,
-    optionFilterProp,
-    maxTagCount,
-    options,
-  } = params;
-
+export function useInputValidation(params: ValidationParams) {
+  const { onSave, buildCode, ...fields } = params;
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateAndSave = (): Record<string, string> => {
@@ -75,73 +96,229 @@ export function useInputValidation(
       if (!res.valid) hasError = true;
     };
 
-    // ---- Validaciones comunes ----
-    if (label !== undefined)
-      checkField("errorLabel", label, validators.validateLabel);
-    if (name !== undefined)
-      checkField("errorName", name, validators.validateName);
-    if (placeholder !== undefined)
+    // ---- Strings ----
+    if (fields.innerText !== undefined)
+      checkField(
+        "errorInnerText",
+        fields.innerText,
+        validators.validateInnerText
+      );
+    if (fields.label !== undefined)
+      checkField("errorLabel", fields.label, validators.validateLabel);
+    if (fields.name !== undefined)
+      checkField("errorName", fields.name, validators.validateName);
+    if (fields.placeholder !== undefined)
       checkField(
         "errorPlaceholder",
-        placeholder,
+        fields.placeholder,
         validators.validatePlaceholder
       );
-    if (minLength !== undefined)
-      checkField("errorMinLength", minLength, validators.validateMinLength);
-    if (maxLength !== undefined)
-      checkField("errorMaxLength", maxLength, validators.validateMaxLength);
-    if (min !== undefined) checkField("errorMin", min, validators.validateMin);
-    if (max !== undefined) checkField("errorMax", max, validators.validateMax);
-    if (addonBefore !== undefined)
+    if (fields.addonBefore !== undefined)
       checkField(
         "errorAddonBefore",
-        addonBefore,
+        fields.addonBefore,
         validators.validateAddonValue
       );
-    if (addonAfter !== undefined)
-      checkField("errorAddonAfter", addonAfter, validators.validateAddonValue);
-    if (prefix !== undefined)
-      checkField("errorPrefix", prefix, validators.validateAddonValue);
-    if (suffix !== undefined)
-      checkField("errorSuffix", suffix, validators.validateAddonValue);
-    if (id !== undefined) checkField("errorId", id, validators.validateId);
-    if (size !== undefined)
-      checkField("errorSize", size, validators.validateSize);
-    if (status !== undefined)
-      checkField("errorStatus", status, validators.validateStatus);
-    if (className !== undefined)
-      checkField("errorClassName", className, validators.validateClassName);
-    if (type !== undefined)
-      checkField("errorButtonType", type, validators.validateButtonType);
-    if (label !== undefined && type !== undefined)
-      checkField("errorButtonLabel", label, validators.validateButtonLabel);
-    if (size !== undefined && type !== undefined)
-      checkField("errorButtonSize", size, validators.validateButtonSize);
-
-    // ---- Validaciones específicas de Select ----
-    if (mode !== undefined)
-      checkField("errorMode", mode, validators.validateSelectMode);
-    if (optionFilterProp !== undefined)
+    if (fields.addonAfter !== undefined)
+      checkField(
+        "errorAddonAfter",
+        fields.addonAfter,
+        validators.validateAddonValue
+      );
+    if (fields.prefix !== undefined)
+      checkField("errorPrefix", fields.prefix, validators.validateAddonValue);
+    if (fields.suffix !== undefined)
+      checkField("errorSuffix", fields.suffix, validators.validateAddonValue);
+    if (fields.optionFilterProp !== undefined)
       checkField(
         "errorOptionFilterProp",
-        optionFilterProp,
+        fields.optionFilterProp,
         validators.validateOptionFilterProp
       );
-    if (maxTagCount !== undefined)
+    if (fields.optionLabelProp !== undefined)
       checkField(
-        "errorMaxTagCount",
-        maxTagCount,
-        validators.validateMaxTagCount
+        "errorOptionLabelProp",
+        fields.optionLabelProp,
+        validators.validateOptionLabelProp
+      );
+    if (fields.notFoundContent !== undefined)
+      checkField(
+        "errorNotFoundContent",
+        fields.notFoundContent,
+        validators.validateStringProp
+      );
+    if (fields.dropdownStyle !== undefined)
+      checkField(
+        "errorDropdownStyle",
+        fields.dropdownStyle,
+        validators.validateStringProp
+      );
+    if (fields.dropdownClassName !== undefined)
+      checkField(
+        "errorDropdownClassName",
+        fields.dropdownClassName,
+        validators.validateClassName
       );
 
-    // Validar options
-    if (options !== undefined) {
-      const res = validators.validateOptionsArray(options);
+    // ---- Numéricos ----
+    if (fields.minLength !== undefined)
+      checkField(
+        "errorMinLength",
+        fields.minLength,
+        validators.validateMinLength
+      );
+    if (fields.maxLength !== undefined)
+      checkField(
+        "errorMaxLength",
+        fields.maxLength,
+        validators.validateMaxLength
+      );
+    if (fields.min !== undefined)
+      checkField("errorMin", fields.min, validators.validateMin);
+    if (fields.max !== undefined)
+      checkField("errorMax", fields.max, validators.validateMax);
+    if (fields.maxTagCount !== undefined)
+      checkField(
+        "errorMaxTagCount",
+        fields.maxTagCount,
+        validators.validatePositiveInteger
+      );
+    if (fields.listHeight !== undefined)
+      checkField(
+        "errorListHeight",
+        fields.listHeight,
+        validators.validatePositiveInteger
+      );
+    if (fields.listItemHeight !== undefined)
+      checkField(
+        "errorListItemHeight",
+        fields.listItemHeight,
+        validators.validatePositiveInteger
+      );
+    if (fields.step !== undefined)
+      checkField("errorStep", fields.step, validators.validatePositiveNumber);
+    if (fields.precision !== undefined)
+      checkField(
+        "errorPrecision",
+        fields.precision,
+        validators.validatePositiveInteger
+      );
+    if (fields.minuteStep !== undefined)
+      checkField(
+        "errorMinuteStep",
+        fields.minuteStep,
+        validators.validateMinuteStep
+      );
+    if (fields.secondStep !== undefined)
+      checkField(
+        "errorSecondStep",
+        fields.secondStep,
+        validators.validateSecondStep
+      );
+
+    // ---- Booleans ----
+    const booleanFields: (keyof ValidationParams)[] = [
+      "block",
+      "danger",
+      "loading",
+      "disabled",
+      "visibilityToggle",
+      "autoSize",
+      "showCount",
+      "allowClear",
+      "showSearch",
+      "filterOption",
+      "dropdownMatchSelectWidth",
+      "labelInValue",
+      "defaultActiveFirstOption",
+      "virtual",
+      "bordered",
+      "showArrow",
+      "open",
+      "keyboard",
+      "controls",
+      "dots",
+      "range",
+      "allowHalf",
+      "tooltips",
+      "use12Hours",
+      "checked",
+      "indeterminate",
+    ];
+
+    booleanFields.forEach((key) => {
+      if (fields[key as keyof typeof fields] !== undefined) {
+        let validatorFn = validators.validateCheckbox;
+        if (key === "checked") validatorFn = validators.validateChecked;
+        if (key === "indeterminate")
+          validatorFn = validators.validateIndeterminate;
+
+        const { valid, error } = validatorFn(
+          fields[key as keyof typeof fields]
+        );
+        newErrors[`error${key[0].toUpperCase() + key.slice(1)}`] = valid
+          ? ""
+          : error || "";
+        if (!valid) hasError = true;
+      }
+    });
+
+    // ---- Selects restringidos ----
+    if (fields.size !== undefined)
+      checkField("errorSize", fields.size, validators.validateSize);
+    if (fields.status !== undefined)
+      checkField("errorStatus", fields.status, validators.validateStatus);
+    if (fields.placement !== undefined)
+      checkField(
+        "errorPlacement",
+        fields.placement,
+        validators.validatePlacement
+      );
+    if (fields.mode !== undefined)
+      checkField("errorMode", fields.mode, validators.validateSelectMode);
+    if (fields.formatDate !== undefined)
+      checkField(
+        "errorFormatDate",
+        fields.formatDate,
+        validators.validateFormatDate
+      );
+    if (fields.formatTime !== undefined)
+      checkField(
+        "errorFormatTime",
+        fields.formatTime,
+        validators.validateFormatTime
+      );
+
+    // ---- Button ----
+    if (fields.type !== undefined)
+      checkField("errorButtonType", fields.type, validators.validateButtonType);
+    if (fields.label !== undefined && fields.type !== undefined)
+      checkField(
+        "errorButtonLabel",
+        fields.label,
+        validators.validateButtonLabel
+      );
+    if (fields.size !== undefined && fields.type !== undefined)
+      checkField("errorButtonSize", fields.size, validators.validateButtonSize);
+
+    // ---- Options de Select ----
+    if (fields.options !== undefined) {
+      const res = validators.validateOptionsArray(fields.options);
       if (!res.valid) {
         Object.assign(newErrors, res.errors);
         hasError = true;
       }
     }
+
+    // ---- Id y className ----
+    if (fields.id !== undefined)
+      checkField("errorId", fields.id, validators.validateId);
+    if (fields.className !== undefined)
+      checkField(
+        "errorClassName",
+        fields.className,
+        validators.validateClassName
+      );
 
     setErrors(newErrors);
 

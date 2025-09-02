@@ -1,19 +1,20 @@
 export interface BaseInputFields {
   // Básicos
-  label: string;
-  name: string;
-  placeholder: string;
-  disabled: boolean;
+  innerText?: string;
+  label?: string;
+  name?: string;
+  placeholder?: string;
+  disabled?: boolean;
   readOnly?: boolean;
   autoFocus?: boolean;
 
   // Estilos / tamaños
-  size: "small" | "middle" | "large";
-  status: "" | "error" | "warning";
+  size?: "small" | "middle" | "large";
+  status?: "" | "error" | "warning";
   className?: string;
 
   // Identificadores
-  inputId: string;
+  inputId?: string;
 
   // Addons
   addonBefore?: string;
@@ -59,7 +60,7 @@ export interface BaseInputFields {
   showArrow?: boolean;
   open?: boolean;
   notFoundContent?: string;
-  dropdownStyle?: string; // ⬅️ cambiado a string
+  dropdownStyle?: string;
   dropdownClassName?: string;
   listHeight?: number;
   listItemHeight?: number;
@@ -67,20 +68,26 @@ export interface BaseInputFields {
 
   // Rate
   allowHalf?: boolean;
-  tooltips?: boolean; // ⬅️ cambiado a boolean
+  tooltips?: string[];
+  tooltipsEnabled?: boolean;
   character?: React.ReactNode;
 
   // Slider
   dots?: boolean;
-  range?: boolean; // ⬅️ cambiado a boolean
+  range?: boolean;
 
   // Date/Time
   picker?: "date" | "week" | "month" | "quarter" | "year" | "time";
-  showTime?: boolean; // ⬅️ cambiado a boolean
-  format?: string;
+  showTime?: boolean;
+  formatDate?: "YYYY-MM-DD" | "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY/MM/DD";
+  formatTime?: "HH:mm:ss" | "HH:mm" | "hh:mm:ss a" | "hh:mm a";
   use12Hours?: boolean;
 
   // TimePicker específicos
   minuteStep?: number;
   secondStep?: number;
+
+  // Checkbox específicos
+  checked?: boolean;
+  indeterminate?: boolean;
 }

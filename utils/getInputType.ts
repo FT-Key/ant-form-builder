@@ -63,6 +63,11 @@ export function getInputType(codeBlock?: string): InputType {
     if (/\bAutoComplete\b/.test(codeBlock)) return "autocomplete";
     if (/\bTransfer\b/.test(codeBlock)) return "transfer";
     if (/\bInput\.Search\b/.test(codeBlock)) return "search";
+    if (/\bCheckbox\.Group\b/.test(codeBlock)) return "checkboxgroup";
+    if (/\bCheckbox\b/.test(codeBlock)) return "checkbox";
+    if (/\bRadio\.Group\b/.test(codeBlock)) return "radiogroup";
+    if (/\bSwitch\b/.test(codeBlock)) return "switch";
+    if (/\bColorPicker\b/.test(codeBlock)) return "colorpicker";
     if (/\bButton\b/.test(codeBlock)) return "submit";
     if (/\bInput\b/.test(codeBlock)) return "text"; // genérico para inputs
     return "formitem"; // Form.Item sin tipo reconocido
@@ -83,6 +88,11 @@ export function getInputType(codeBlock?: string): InputType {
   if (root === "Space.Compact" || root === "FormGroup") return "formgroup";
 
   // --- Búsqueda en contenido (fallback) ---
+  if (/\bCheckbox\.Group\b/.test(codeBlock)) return "checkboxgroup";
+  if (/\bCheckbox\b/.test(codeBlock)) return "checkbox";
+  if (/\bRadio\.Group\b/.test(codeBlock)) return "radiogroup";
+  if (/\bSwitch\b/.test(codeBlock)) return "switch";
+  if (/\bColorPicker\b/.test(codeBlock)) return "colorpicker";
   if (/\bQRCode\b/.test(codeBlock)) return "qr";
   if (/\bImage\.PreviewGroup\b/.test(codeBlock)) return "imagepreviewgroup";
   if (/\bDescriptions(\.Item)?\b/.test(codeBlock)) return "descriptions";

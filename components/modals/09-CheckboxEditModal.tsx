@@ -1,17 +1,15 @@
 "use client";
 
-import {
-  Modal,
-  Input,
-  Checkbox as AntdCheckbox,
-  Select,
-  Collapse,
-  Divider,
-} from "antd";
 import { useEffect, useState } from "react";
+import { Modal, Divider, Collapse } from "antd";
 import { useAntdVersion } from "@/context/AntdVersionContext";
+import { useInputValidation } from "@/hooks/useInputValidation";
+import { useCollapsePanels } from "@/hooks/modals/useCollapsePanels";
+import { BaseInputFields } from "@/types/BaseInputFields";
+import { BasicFields } from "@/components/modals/BasicFields";
+import { AdvancedFields } from "@/components/modals/AdvancedFields";
+import { buildInputCode } from "@/utils/modals/buildInputCode";
 
-const { Option } = Select;
 const { Panel } = Collapse;
 
 interface CheckboxEditModalProps {
@@ -29,60 +27,89 @@ export default function CheckboxEditModal({
 }: CheckboxEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
-  // Estados básicos
-  const [label, setLabel] = useState("");
-  const [name, setName] = useState("");
-  const [checked, setChecked] = useState(false);
+  const [localFields, setLocalFields] = useState<BaseInputFields>({
+    label: "",
+    name: "",
+    inputId: "",
+    className: "",
+    disabled: false,
+    readOnly: false,
+    autoFocus: false,
+    status: "",
+    allowClear: true,
+    indeterminate: false,
+    checked: false,
+  });
 
-  // Opciones avanzadas
-  const [disabled, setDisabled] = useState(false);
-  const [indeterminate, setIndeterminate] = useState(false);
-  const [autoFocus, setAutoFocus] = useState(false);
-  const [inputId, setInputId] = useState("");
-  const [readOnly, setReadOnly] = useState(false);
-  const [status, setStatus] = useState<"" | "error" | "warning">("");
+  // Collapse avanzado
+  const { activePanels, setActivePanels } = useCollapsePanels(
+    ["errorLabel", "errorName"],
+    ["errorId", "errorClassName", "errorStatus"]
+  );
 
+  // Validación + guardado
+  const { errors, validateAndSave } = useInputValidation({
+    ...localFields,
+    id: localFields.inputId,
+    onSave,
+    buildCode: () => buildInputCode(localFields, {}, "Checkbox"),
+  });
+
+  // Parsear codeBlock al abrir modal
   useEffect(() => {
+    if (!open) return;
+
+    const matchAttr = (attr: string) =>
+      codeBlock.match(new RegExp(`${attr}="([^"]*)"`))?.[1];
+
+    const matchBool = (attr: string) =>
+      codeBlock.includes(attr) && !codeBlock.includes(`${attr}={false}`);
+
+    const isFalse = (attr: string) => codeBlock.includes(`${attr}={false}`);
+
     const labelMatch = codeBlock.match(/<Checkbox[^>]*>([^<]+)<\/Checkbox>/);
-    const nameMatch = codeBlock.match(/name="([^"]*)"/);
-    const checkedMatch = /checked={true}/.test(codeBlock);
-    const disabledMatch = /disabled/.test(codeBlock);
-    const indeterminateMatch = /indeterminate/.test(codeBlock);
-    const autoFocusMatch = /autoFocus/.test(codeBlock);
-    const idMatch = codeBlock.match(/id="([^"]*)"/);
-    const readOnlyMatch = /readOnly/.test(codeBlock);
-    const statusMatch = codeBlock.match(/status="(error|warning)"/);
 
-    setLabel(labelMatch?.[1] || "");
-    setName(nameMatch?.[1] || "");
-    setChecked(checkedMatch);
-    setDisabled(disabledMatch);
-    setIndeterminate(indeterminateMatch);
-    setAutoFocus(autoFocusMatch);
-    setInputId(idMatch?.[1] || "");
-    setReadOnly(readOnlyMatch);
-    setStatus(
-      statusMatch?.[1] === "error" || statusMatch?.[1] === "warning"
-        ? statusMatch[1]
-        : ""
+    setLocalFields((prev) => ({
+      ...prev,
+      label: labelMatch?.[1] ?? "",
+      name: matchAttr("name") ?? "",
+      inputId: matchAttr("id") ?? "",
+      className: matchAttr("className") ?? "",
+      disabled: matchBool("disabled"),
+      autoFocus: matchBool("autoFocus"),
+      readOnly: matchBool("readOnly"),
+      allowClear: !isFalse("allowClear"),
+      indeterminate: matchBool("indeterminate"),
+      checked: matchBool("checked"),
+      status:
+        codeBlock.match(/status="(error|warning)"/)?.[1] === "error"
+          ? "error"
+          : codeBlock.match(/status="(error|warning)"/)?.[1] === "warning"
+          ? "warning"
+          : "",
+    }));
+  }, [open, codeBlock]);
+
+  const handleSave = () => {
+    const currentErrors = validateAndSave();
+
+    const hasAdvancedErrors = ["errorId", "errorClassName", "errorStatus"].some(
+      (key) => currentErrors[key]
     );
-  }, [codeBlock]);
 
-  const buildCode = () => {
-    const props: string[] = [];
+    if (hasAdvancedErrors && !activePanels.includes("1")) {
+      setActivePanels([...activePanels, "1"]);
+    }
 
-    if (name) props.push(`name="${name}"`);
-    if (checked) props.push(`checked={true}`);
-    if (disabled) props.push("disabled");
-    if (indeterminate) props.push("indeterminate");
-    if (autoFocus) props.push("autoFocus");
-    if (inputId) props.push(`id="${inputId}"`);
-    if (readOnly) props.push("readOnly");
-    if (antdVersion !== "v3" && status) props.push(`status="${status}"`);
+    const hasAnyErrors = Object.keys(currentErrors).some(
+      (key) => currentErrors[key]
+    );
 
-    return `<Form.Item${name ? ` name="${name}"` : ""}>
-  <Checkbox ${props.join(" ")}>${label}</Checkbox>
-</Form.Item>`;
+    if (!hasAnyErrors) {
+      onSave(buildInputCode(localFields, {}, "Checkbox"));
+      return true;
+    }
+    return false;
   };
 
   return (
@@ -90,7 +117,7 @@ export default function CheckboxEditModal({
       open={open}
       title="Editar Checkbox"
       onCancel={onCancel}
-      onOk={() => onSave(buildCode())}
+      onOk={handleSave}
       okText="Guardar"
       cancelText="Cancelar"
       destroyOnClose
@@ -98,81 +125,36 @@ export default function CheckboxEditModal({
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
 
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="Etiqueta"
-          addonBefore="label"
+        <BasicFields
+          fields={localFields}
+          setField={(key, value) =>
+            setLocalFields((prev) => ({ ...prev, [key]: value }))
+          }
+          errors={errors}
+          show={["innerText", "label", "name", "disabled", "readOnly", "autoFocus"]}
         />
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre (name)"
-          addonBefore="name"
-        />
-        <AntdCheckbox
-          checked={checked}
-          onChange={(e) => setChecked(e.target.checked)}
-          className="mb-2"
+
+        <Collapse
+          ghost
+          activeKey={activePanels}
+          onChange={(keys) => setActivePanels(keys as string[])}
         >
-          checked
-        </AntdCheckbox>
-
-        <Divider />
-
-        <Collapse ghost>
           <Panel header="Opciones avanzadas" key="1">
-            <AntdCheckbox
-              checked={disabled}
-              onChange={(e) => setDisabled(e.target.checked)}
-              className="mb-2"
-            >
-              disabled
-            </AntdCheckbox>
-            <AntdCheckbox
-              checked={indeterminate}
-              onChange={(e) => setIndeterminate(e.target.checked)}
-              className="mb-2"
-            >
-              indeterminate
-            </AntdCheckbox>
-            <AntdCheckbox
-              checked={autoFocus}
-              onChange={(e) => setAutoFocus(e.target.checked)}
-              className="mb-2"
-            >
-              autoFocus
-            </AntdCheckbox>
-            <Input
-              value={inputId}
-              onChange={(e) => setInputId(e.target.value)}
-              placeholder="ID"
-              addonBefore="id"
-              className="mb-2"
+            <AdvancedFields
+              fields={localFields}
+              setField={(key, value) =>
+                setLocalFields((prev) => ({ ...prev, [key]: value }))
+              }
+              errors={errors}
+              show={[
+                "inputId",
+                "className",
+                "status",
+                "checked",
+                "indeterminate",
+              ]}
+              antdVersion={antdVersion}
             />
-            <AntdCheckbox
-              checked={readOnly}
-              onChange={(e) => setReadOnly(e.target.checked)}
-              className="mb-2"
-            >
-              readOnly
-            </AntdCheckbox>
-
-            {antdVersion !== "v3" && (
-              <div>
-                <label className="block mb-1">Estado</label>
-                <Select
-                  value={status}
-                  onChange={setStatus}
-                  style={{ width: "100%" }}
-                  allowClear
-                >
-                  <Option value="">none</Option>
-                  <Option value="error">error</Option>
-                  <Option value="warning">warning</Option>
-                </Select>
-              </div>
-            )}
           </Panel>
         </Collapse>
       </div>

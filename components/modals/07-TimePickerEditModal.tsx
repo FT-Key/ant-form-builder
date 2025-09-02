@@ -40,7 +40,7 @@ export default function TimePickerEditModal({
     className: "",
     allowClear: true,
     use12Hours: false,
-    format: "",
+    formatTime: undefined, // <- undefined por defecto
     minuteStep: undefined,
     secondStep: undefined,
   });
@@ -57,12 +57,11 @@ export default function TimePickerEditModal({
     buildCode: () => buildInputCode(localFields, {}, "TimePicker"),
   });
 
-  // Parsear codeBlock
   useEffect(() => {
     if (!open) return;
 
     const matchAttr = (attr: string) =>
-      codeBlock.match(new RegExp(`${attr}="([^"]*)"`))?.[1] || "";
+      codeBlock.match(new RegExp(`${attr}="([^"]*)"`))?.[1];
 
     const matchNum = (attr: string) =>
       codeBlock.match(new RegExp(`${attr}=\{\\s*(\\d+)\\s*\}`))?.[1];
@@ -75,20 +74,22 @@ export default function TimePickerEditModal({
 
     setLocalFields((prev) => ({
       ...prev,
-      label: matchAttr("label"),
-      name: matchAttr("name"),
-      placeholder: matchAttr("placeholder"),
-      inputId: matchAttr("id"),
-      format: matchAttr("format"),
+      label: matchAttr("label") ?? "",
+      name: matchAttr("name") ?? "",
+      placeholder: matchAttr("placeholder") ?? "",
+      inputId: matchAttr("id") ?? "",
+      formatTime: matchAttr("formatTime") as
+        | BaseInputFields["formatTime"]
+        | undefined,
       disabled: matchBool("disabled"),
       autoFocus: matchBool("autoFocus"),
       allowClear: !isFalse("allowClear"),
       use12Hours: matchBool("use12Hours"),
       minuteStep: matchNum("minuteStep")
-        ? parseInt(matchNum("minuteStep")!)
+        ? parseInt(matchNum("minuteStep")!, 10)
         : undefined,
       secondStep: matchNum("secondStep")
-        ? parseInt(matchNum("secondStep")!)
+        ? parseInt(matchNum("secondStep")!, 10)
         : undefined,
       status:
         codeBlock.match(/status="(error|warning)"/)?.[1] === "error"
@@ -169,7 +170,7 @@ export default function TimePickerEditModal({
                 "className",
                 "allowClear",
                 "use12Hours",
-                "format",
+                "formatTime",
                 "minuteStep",
                 "secondStep",
               ]}
