@@ -1,19 +1,17 @@
+// CheckboxGroupEditModal.tsx
 "use client";
 
-import {
-  Modal,
-  Input,
-  Checkbox,
-  Select,
-  Divider,
-  Button,
-  Space,
-  Collapse,
-} from "antd";
 import { useEffect, useState } from "react";
+import { Modal, Divider, Collapse } from "antd";
 import { useAntdVersion } from "@/context/AntdVersionContext";
+import { useInputValidation } from "@/hooks/useInputValidation";
+import { useCollapsePanels } from "@/hooks/modals/useCollapsePanels";
+import { BaseInputFields } from "@/types/BaseInputFields";
+import { BasicFields } from "@/components/modals/BasicFields";
+import { AdvancedFields } from "@/components/modals/AdvancedFields";
+import { OptionsFields } from "@/components/modals/OptionsFields";
+import { buildInputCode } from "@/utils/modals/buildInputCode";
 
-const { Option } = Select;
 const { Panel } = Collapse;
 
 interface CheckboxGroupEditModalProps {
@@ -21,11 +19,6 @@ interface CheckboxGroupEditModalProps {
   codeBlock: string;
   onCancel: () => void;
   onSave: (updatedCode: string) => void;
-}
-
-interface OptionItem {
-  label: string;
-  value: string;
 }
 
 export default function CheckboxGroupEditModal({
@@ -36,40 +29,68 @@ export default function CheckboxGroupEditModal({
 }: CheckboxGroupEditModalProps) {
   const { antdVersion } = useAntdVersion();
 
-  // Estados
-  const [label, setLabel] = useState("");
-  const [name, setName] = useState("");
-  const [options, setOptions] = useState<OptionItem[]>([]);
-  const [disabled, setDisabled] = useState(false);
-  const [inputId, setInputId] = useState("");
-  const [status, setStatus] = useState<"" | "error" | "warning">("");
+  const [localFields, setLocalFields] = useState<BaseInputFields>({
+    label: "",
+    name: "",
+    inputId: "",
+    className: "",
+    disabled: false,
+    status: "",
+  });
 
-  // Parseo del código entrante
+  const [options, setOptions] = useState<
+    { label: string; value: string; disabled?: boolean }[]
+  >([]);
+
+  // --- Collapse hooks ---
+  const {
+    activePanels: activeOptionPanels,
+    setActivePanels: setActiveOptionPanels,
+    validateAndOpen: validateAndOpenOptions,
+  } = useCollapsePanels([], [], ["errorOption"]); // <-- corregido prefijo
+
+  const {
+    activePanels: activeAdvancedPanels,
+    setActivePanels: setActiveAdvancedPanels,
+    validateAndOpen: validateAndOpenAdvanced,
+  } = useCollapsePanels([], ["errorId", "errorClassName", "errorStatus"]);
+
+  const { errors, validateAndSave } = useInputValidation({
+    ...localFields,
+    options,
+    id: localFields.inputId,
+    onSave,
+    buildCode: () => buildInputCode(localFields, { options }, "Checkbox.Group"),
+  });
+
+  // --- Parse codeBlock ---
   useEffect(() => {
-    const labelMatch = codeBlock.match(/label="([^"]*)"/);
-    const nameMatch = codeBlock.match(/name="([^"]*)"/);
-    const disabledMatch = /disabled/.test(codeBlock);
-    const idMatch = codeBlock.match(/id="([^"]+)"/);
+    if (!open) return;
+
+    const matchAttr = (attr: string) =>
+      codeBlock.match(new RegExp(`${attr}="([^"]*)"`))?.[1] ?? "";
+
+    const matchBool = (attr: string) =>
+      codeBlock.includes(attr) && !codeBlock.includes(`${attr}={false}`);
+
     const statusMatch = codeBlock.match(/status="(error|warning)"/);
 
     const optionsMatch = codeBlock.match(/options=\{(\[[^\]]*\])\}/);
-    let parsedOptions: OptionItem[] = [];
+    let parsedOptions: { label: string; value: string }[] = [];
+
     if (optionsMatch) {
       try {
-        const rawStr = optionsMatch[1];
-
-        // Detecta si es un array de strings
-        const isStringArray = /^(\s*'[^']*'\s*,?)*$/.test(
-          rawStr.replace(/[\[\]\s]/g, "").replace(/"([^"]*)"/g, "'$1'")
-        );
-
-        if (isStringArray) {
+        const rawStr = optionsMatch[1].trim();
+        if (
+          /^\s*['"].+['"](,\s*['"].+['"])*\s*$/.test(
+            rawStr.replace(/[\[\]]/g, "")
+          )
+        ) {
           const strArray = JSON.parse(rawStr.replace(/'/g, '"')) as string[];
-          parsedOptions = strArray.map((val) => ({ label: val, value: val }));
+          parsedOptions = strArray.map((v) => ({ label: v, value: v }));
         } else {
-          // Asumimos que es un array de objetos
           const jsonStr = rawStr
-            .replace(/([a-zA-Z0-9]+):/g, '"$1":')
+            .replace(/([a-zA-Z0-9_]+):/g, '"$1":')
             .replace(/'/g, '"');
           parsedOptions = JSON.parse(jsonStr);
         }
@@ -78,62 +99,36 @@ export default function CheckboxGroupEditModal({
       }
     }
 
-    setLabel(labelMatch?.[1] || "");
-    setName(nameMatch?.[1] || "");
-    setDisabled(disabledMatch);
-    setInputId(idMatch?.[1] || "");
-    setStatus(
-      statusMatch?.[1] === "error" || statusMatch?.[1] === "warning"
-        ? statusMatch[1]
-        : ""
-    );
+    setLocalFields((prev) => ({
+      ...prev,
+      label: matchAttr("label"),
+      name: matchAttr("name"),
+      inputId: matchAttr("id"),
+      className: matchAttr("className"),
+      disabled: matchBool("disabled"),
+      status:
+        statusMatch?.[1] === "error" || statusMatch?.[1] === "warning"
+          ? statusMatch[1]
+          : "",
+    }));
     setOptions(parsedOptions);
-  }, [codeBlock]);
+  }, [open, codeBlock]);
 
-  // CRUD de opciones
-  const updateOption = (
-    index: number,
-    field: keyof OptionItem,
-    value: string
-  ) => {
-    const newOptions = [...options];
-    newOptions[index][field] = value;
-    setOptions(newOptions);
-  };
+  const handleSave = () => {
+    const currentErrors = validateAndSave();
 
-  const addOption = () => {
-    setOptions([...options, { label: "", value: "" }]);
-  };
+    // Abrir automáticamente los panels que tengan errores
+    validateAndOpenOptions(currentErrors);
+    validateAndOpenAdvanced(currentErrors);
 
-  const removeOption = (index: number) => {
-    const newOptions = options.filter((_, i) => i !== index);
-    setOptions(newOptions);
-  };
-
-  // Generar JSX
-  const buildCode = () => {
-    const props: string[] = [];
-
-    if (name) props.push(`name="${name}"`);
-    if (disabled) props.push("disabled");
-    if (inputId) props.push(`id="${inputId}"`);
-    if (antdVersion !== "v3" && status) props.push(`status="${status}"`);
-
-    const optionsString = `[${options
-      .map(
-        (opt) =>
-          `{ label: '${opt.label.replace(
-            /'/g,
-            "\\'"
-          )}', value: '${opt.value.replace(/'/g, "\\'")}' }`
-      )
-      .join(", ")}]`;
-
-    props.push(`options={${optionsString}}`);
-
-    return `<Form.Item label="${label}" name="${name}">
-  <Checkbox.Group ${props.join(" ")} />
-</Form.Item>`;
+    const hasAnyErrors = Object.keys(currentErrors).some(
+      (key) => currentErrors[key]
+    );
+    if (!hasAnyErrors) {
+      onSave(buildInputCode(localFields, { options }, "Checkbox.Group"));
+      return true;
+    }
+    return false;
   };
 
   return (
@@ -141,84 +136,54 @@ export default function CheckboxGroupEditModal({
       open={open}
       title="Editar Checkbox Group"
       onCancel={onCancel}
-      onOk={() => onSave(buildCode())}
+      onOk={handleSave}
       okText="Guardar"
       cancelText="Cancelar"
-      width={600}
+      width={650}
       destroyOnClose
     >
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
+        <BasicFields
+          fields={localFields}
+          setField={(key, value) =>
+            setLocalFields((prev) => ({ ...prev, [key]: value }))
+          }
+          errors={errors}
+          show={["label", "name", "disabled"]}
+        />
 
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          addonBefore="label"
-        />
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          addonBefore="name"
-        />
-        <Checkbox
-          checked={disabled}
-          onChange={(e) => setDisabled(e.target.checked)}
+        <Collapse
+          ghost
+          activeKey={activeOptionPanels}
+          onChange={(keys) => setActiveOptionPanels(keys as string[])}
         >
-          disabled
-        </Checkbox>
-
-        <Divider />
-
-        <Collapse ghost>
-          <Panel header="Opciones avanzadas" key="1">
-            <div className="mb-4">
-              <label className="block mb-2 font-medium">Opciones</label>
-              {options.map((opt, idx) => (
-                <Space key={idx} align="baseline" className="mb-2">
-                  <Input
-                    placeholder="Label"
-                    value={opt.label}
-                    onChange={(e) => updateOption(idx, "label", e.target.value)}
-                    style={{ width: 180 }}
-                  />
-                  <Input
-                    placeholder="Value"
-                    value={opt.value}
-                    onChange={(e) => updateOption(idx, "value", e.target.value)}
-                    style={{ width: 180 }}
-                  />
-                  <Button danger onClick={() => removeOption(idx)}>
-                    Eliminar
-                  </Button>
-                </Space>
-              ))}
-              <Button type="dashed" block onClick={addOption}>
-                + Agregar opción
-              </Button>
-            </div>
-
-            <Input
-              value={inputId}
-              onChange={(e) => setInputId(e.target.value)}
-              addonBefore="id"
-              className="mb-2"
+          <Panel header="Opciones" key="options">
+            {" "}
+            {/* key coincide con useCollapsePanels */}
+            <OptionsFields
+              options={options}
+              setOptions={setOptions}
+              errors={errors}
             />
+          </Panel>
+        </Collapse>
 
-            {antdVersion !== "v3" && (
-              <div>
-                <label className="block mb-1">Estado</label>
-                <Select
-                  value={status}
-                  onChange={setStatus}
-                  style={{ width: "100%" }}
-                  allowClear
-                >
-                  <Option value="">none</Option>
-                  <Option value="error">error</Option>
-                  <Option value="warning">warning</Option>
-                </Select>
-              </div>
-            )}
+        <Collapse
+          ghost
+          activeKey={activeAdvancedPanels}
+          onChange={(keys) => setActiveAdvancedPanels(keys as string[])}
+        >
+          <Panel header="Opciones avanzadas" key="advanced">
+            <AdvancedFields
+              fields={localFields}
+              setField={(key, value) =>
+                setLocalFields((prev) => ({ ...prev, [key]: value }))
+              }
+              errors={errors}
+              show={["inputId", "className", "status"]}
+              antdVersion={antdVersion}
+            />
           </Panel>
         </Collapse>
       </div>

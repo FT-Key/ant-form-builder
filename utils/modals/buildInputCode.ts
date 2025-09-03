@@ -15,7 +15,7 @@ export function buildInputCode(
   };
   delete mappedFields.inputId;
 
-  const { options, innerText, ...rest } = mappedFields; // <-- extraemos innerText
+  const { options, innerText, ...rest } = mappedFields; // extraemos innerText
 
   const skipInnerProps = new Set(["label", "name"]);
 
@@ -63,7 +63,7 @@ export function buildInputCode(
   if (fields.label !== undefined) formItemAttrs.push(`label="${fields.label}"`);
   if (fields.name !== undefined) formItemAttrs.push(`name="${fields.name}"`);
 
-  // Select con options
+  // 🔹 Ajuste para Select con options
   if (component === "Select" && Array.isArray(options) && options.length > 0) {
     const children = options
       .map(
@@ -79,6 +79,39 @@ ${children}
   </Form.Item>`;
   }
 
+  // 🔹 Ajuste para Checkbox.Group con options
+  if (component === "Checkbox.Group" && Array.isArray(options)) {
+    const optionsString = `[${options
+      .map((opt) =>
+        typeof opt === "string"
+          ? `'${opt.replace(/'/g, "\\'")}'`
+          : `{ label: '${opt.label.replace(
+              /'/g,
+              "\\'"
+            )}', value: '${opt.value.replace(/'/g, "\\'")}' }`
+      )
+      .join(", ")}]`;
+
+    props.push(`options={${optionsString}}`);
+  }
+
+  // 🔹 Ajuste para Radio.Group con options
+  if (
+    component === "Radio.Group" &&
+    Array.isArray(options) &&
+    options.length > 0
+  ) {
+    const children = options
+      .map((opt) => `      <Radio value="${opt.value}">${opt.label}</Radio>`)
+      .join("\n");
+
+    return `<Form.Item ${formItemAttrs.join(" ")} >
+    <Radio.Group ${props.join(" ")} >
+${children}
+    </Radio.Group>
+  </Form.Item>`;
+  }
+
   // Determinar el componente completo
   let fullComponent = component;
   if (namespace) {
@@ -90,7 +123,6 @@ ${children}
   } else if (component === "TimePicker") {
     fullComponent = `TimePicker`;
     if (fields.formatTime) props.push(`format="${fields.formatTime}"`);
-    if (fields.className) props.push(`className="${fields.className}"`);
   } else {
     if (fields.className) props.push(`className="${fields.className}"`);
   }
@@ -105,5 +137,5 @@ ${children}
 
   return `<Form.Item ${formItemAttrs.join(" ")} >
     <${fullComponent} ${props.join(" ")} />
-  </Form.Item>`;
+</Form.Item>`;
 }

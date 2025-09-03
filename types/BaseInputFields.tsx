@@ -1,3 +1,12 @@
+// BaseInputFields.ts
+export interface OptionItem {
+  label: string;
+  value: string;
+  disabled?: boolean;
+  optionType?: "default" | "button"; // usado en Radio.Group
+  children?: OptionItem[]; // para Select/Cascader/TreeSelect jerárquicos
+}
+
 export interface BaseInputFields {
   // Básicos
   innerText?: string;
@@ -43,7 +52,6 @@ export interface BaseInputFields {
 
   // Select
   mode?: "" | "multiple" | "tags";
-  options?: { label: string; value: string }[];
   optionFilterProp?: string;
   filterOption?: boolean;
   maxTagCount?: number;
@@ -90,4 +98,8 @@ export interface BaseInputFields {
   // Checkbox específicos
   checked?: boolean;
   indeterminate?: boolean;
+
+  // Otros
+  options?: OptionItem[]; // usado en CheckboxGroup, RadioGroup, Select, etc.
+  [key: string]: any; // flexibilidad extra
 }

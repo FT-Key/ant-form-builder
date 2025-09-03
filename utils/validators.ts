@@ -391,3 +391,31 @@ export const validateIndeterminate = (value: unknown) => {
     return { valid: false, error: "Debe definir si es indeterminado o no" };
   return { valid: true };
 };
+
+// validators.ts
+
+// ✅ Valida optionType
+export function validateOptionType(value?: string) {
+  const valid = ["default", "button"];
+  if (!value) return { valid: true };
+  if (!valid.includes(value)) {
+    return {
+      valid: false,
+      error: `El tipo de opción debe ser uno de: ${valid.join(", ")}`,
+    };
+  }
+  return { valid: true };
+}
+
+// ✅ Valida buttonStyle
+export function validateButtonStyle(value?: string) {
+  const valid = ["outline", "solid"];
+  if (!value) return { valid: true };
+  if (!valid.includes(value)) {
+    return {
+      valid: false,
+      error: `El estilo del botón debe ser uno de: ${valid.join(", ")}`,
+    };
+  }
+  return { valid: true };
+}

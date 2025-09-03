@@ -3,6 +3,7 @@
 import { Input, Select, Checkbox } from "antd";
 import { BaseInputFields } from "@/types/BaseInputFields";
 import { DateTimeAdvancedFields } from "./advanced/DateTimeAdvancedFields";
+import { RadioGroupAdvancedFields } from "./advanced/RadioGroupAdvancedFields";
 
 const { Option } = Select;
 
@@ -40,6 +41,47 @@ export function AdvancedFields({
 }: AdvancedFieldsProps) {
   return (
     <div className="space-y-3">
+      {/* ---- Generales (id, className, size, status) ---- */}
+      {show.includes("inputId") && (
+        <Input
+          value={fields.inputId}
+          onChange={(e) => setField("inputId", e.target.value)}
+          placeholder="ID"
+          addonBefore="id"
+          status={errors["errorId"] ? "error" : undefined}
+        />
+      )}
+      {show.includes("size") && (
+        <Select
+          value={fields.size}
+          onChange={(value) => setField("size", value)}
+          style={{ width: "100%" }}
+        >
+          <Option value="small">small</Option>
+          <Option value="middle">middle</Option>
+          <Option value="large">large</Option>
+        </Select>
+      )}
+      {show.includes("status") && antdVersion !== "v3" && (
+        <Select
+          value={fields.status}
+          onChange={(value) => setField("status", value)}
+          style={{ width: "100%" }}
+        >
+          <Option value="">none</Option>
+          <Option value="error">error</Option>
+          <Option value="warning">warning</Option>
+        </Select>
+      )}
+      {show.includes("className") && (
+        <Input
+          value={fields.className}
+          onChange={(e) => setField("className", e.target.value)}
+          placeholder="className"
+          addonBefore="className"
+          status={errors["errorClassName"] ? "error" : undefined}
+        />
+      )}
       {/* ---- Input / Input.Password / TextArea ---- */}
       {show.includes("addonBefore") && (
         <Input
@@ -105,7 +147,6 @@ export function AdvancedFields({
           showCount
         </Checkbox>
       )}
-
       {/* ---- Select ---- */}
       {show.includes("allowClear") && setAllowClear && (
         <Checkbox
@@ -291,7 +332,6 @@ export function AdvancedFields({
           </Select>
         </>
       )}
-
       {/* ---- InputNumber ---- */}
       {show.includes("step") && (
         <Input
@@ -337,7 +377,6 @@ export function AdvancedFields({
           controls
         </Checkbox>
       )}
-
       {/* ---- Slider / Rate ---- */}
       {show.includes("dots") && (
         <Checkbox
@@ -371,51 +410,9 @@ export function AdvancedFields({
           tooltips
         </Checkbox>
       )}
-
       {/* ---- DatePicker / TimePicker / RangePicker (delegado) ---- */}
       <DateTimeAdvancedFields show={show} fields={fields} setField={setField} />
 
-      {/* ---- Generales (id, className, size, status) ---- */}
-      {show.includes("inputId") && (
-        <Input
-          value={fields.inputId}
-          onChange={(e) => setField("inputId", e.target.value)}
-          placeholder="ID"
-          addonBefore="id"
-          status={errors["errorId"] ? "error" : undefined}
-        />
-      )}
-      {show.includes("size") && (
-        <Select
-          value={fields.size}
-          onChange={(value) => setField("size", value)}
-          style={{ width: "100%" }}
-        >
-          <Option value="small">small</Option>
-          <Option value="middle">middle</Option>
-          <Option value="large">large</Option>
-        </Select>
-      )}
-      {show.includes("status") && antdVersion !== "v3" && (
-        <Select
-          value={fields.status}
-          onChange={(value) => setField("status", value)}
-          style={{ width: "100%" }}
-        >
-          <Option value="">none</Option>
-          <Option value="error">error</Option>
-          <Option value="warning">warning</Option>
-        </Select>
-      )}
-      {show.includes("className") && (
-        <Input
-          value={fields.className}
-          onChange={(e) => setField("className", e.target.value)}
-          placeholder="className"
-          addonBefore="className"
-          status={errors["errorClassName"] ? "error" : undefined}
-        />
-      )}
       {show.includes("checked") && (
         <Checkbox
           checked={!!fields.checked} // forzamos a booleano
@@ -426,12 +423,14 @@ export function AdvancedFields({
       )}
       {show.includes("indeterminate") && (
         <Checkbox
-          indeterminate={!!fields.indeterminate}
           checked={!!fields.indeterminate}
           onChange={(e) => setField("indeterminate", e.target.checked)}
         >
           indeterminate
         </Checkbox>
+      )}
+      {show.includes("optionType") && (
+        <RadioGroupAdvancedFields fields={fields} setField={setField} />
       )}
     </div>
   );

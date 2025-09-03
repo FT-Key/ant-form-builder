@@ -52,19 +52,29 @@ export default function SelectEditModal({
     options: [],
   });
 
-  // Collapse hooks
-  const {
-    activePanels: activeAdvancedPanels,
-    setActivePanels: setActiveAdvancedPanels,
-    validateAndOpen: validateAndOpenAdvanced,
-  } = useCollapsePanels([], ["errorAllowClear", "errorShowSearch"]);
-
+  // --- Collapse hooks ---
   const {
     activePanels: activeOptionPanels,
     setActivePanels: setActiveOptionPanels,
     validateAndOpen: validateAndOpenOptions,
   } = useCollapsePanels([], [], ["errorOptions"]);
 
+  const {
+    activePanels: activeAdvancedPanels,
+    setActivePanels: setActiveAdvancedPanels,
+    validateAndOpen: validateAndOpenAdvanced,
+  } = useCollapsePanels(
+    [],
+    [
+      "errorId",
+      "errorClassName",
+      "errorStatus",
+      "errorAllowClear",
+      "errorShowSearch",
+    ]
+  );
+
+  // --- Input validation hook ---
   const { errors, validateAndSave } = useInputValidation({
     ...localFields,
     id: localFields.inputId,
@@ -92,7 +102,7 @@ export default function SelectEditModal({
         : "</Select>"),
   });
 
-  // Inicializar campos al abrir modal
+  // --- Inicializar campos al abrir modal ---
   useEffect(() => {
     if (!open) return;
 
@@ -114,7 +124,6 @@ export default function SelectEditModal({
 
     setLocalFields((prev) => ({
       ...prev,
-      // básicos
       label: matchAttr("label"),
       name: matchAttr("name"),
       placeholder: matchAttr("placeholder"),
@@ -123,14 +132,12 @@ export default function SelectEditModal({
       disabled: matchBool("disabled"),
       readOnly: matchBool("readOnly"),
       autoFocus: matchBool("autoFocus"),
-      // select básicos
       allowClear: matchBool("allowClear"),
       showSearch: matchBool("showSearch"),
       mode:
         (codeBlock.match(/mode="(multiple|tags)"/)?.[1] as
           | "multiple"
           | "tags") || "",
-      // select avanzados
       filterOption: !/filterOption={false}/.test(codeBlock),
       loading: matchBool("loading"),
       optionFilterProp: matchAttr("optionFilterProp"),
@@ -155,20 +162,24 @@ export default function SelectEditModal({
       placement: validPlacements.includes(rawPlacement as any)
         ? (rawPlacement as (typeof validPlacements)[number])
         : undefined,
-      // opciones
       options: Array.from(
         codeBlock.matchAll(
           /<Select\.Option value="([^"]+)">([^<]+)<\/Select\.Option>/g
         )
       ).map((m) => ({ value: m[1], label: m[2] })),
     }));
+
+    // --- Abrir automáticamente panels con errores al abrir modal ---
+    const currentErrors = validateAndSave();
+    validateAndOpenOptions(currentErrors);
+    validateAndOpenAdvanced(currentErrors);
   }, [open, codeBlock]);
 
   const handleSave = () => {
     const currentErrors = validateAndSave();
 
-    validateAndOpenAdvanced(currentErrors);
     validateAndOpenOptions(currentErrors);
+    validateAndOpenAdvanced(currentErrors);
 
     const hasAnyErrors = Object.keys(currentErrors).some(
       (key) => currentErrors[key]
@@ -199,6 +210,8 @@ export default function SelectEditModal({
       onOk={handleSave}
       okText="Guardar"
       cancelText="Cancelar"
+      width={650}
+      destroyOnClose
     >
       <div className="space-y-4">
         <Divider>Campos básicos</Divider>
@@ -228,8 +241,6 @@ export default function SelectEditModal({
           <Panel header="Opciones" key="options">
             <OptionsFields
               options={localFields.options}
-              mode={localFields.mode}
-              setMode={(v) => setLocalFields((prev) => ({ ...prev, mode: v }))}
               setOptions={(opts) =>
                 setLocalFields((prev) => ({ ...prev, options: opts }))
               }
@@ -251,6 +262,9 @@ export default function SelectEditModal({
               }
               errors={errors}
               show={[
+                "inputId",
+                "className",
+                "status",
                 "allowClear",
                 "showSearch",
                 "filterOption",

@@ -1,84 +1,11 @@
 // hooks/useInputValidation.ts
 import { useState } from "react";
 import * as validators from "@/utils/validators";
+import { BaseInputFields } from "@/types/BaseInputFields";
 
-export interface ValidationParams {
+export interface ValidationParams extends BaseInputFields {
   onSave: (code: string) => void;
   buildCode: () => string;
-
-  // comunes
-  innerText?: string;
-  label?: string;
-  name?: string;
-  placeholder?: string;
-  id?: string;
-  className?: string;
-
-  // numéricos
-  minLength?: number;
-  maxLength?: number;
-  min?: number;
-  max?: number;
-  maxTagCount?: number;
-  listHeight?: number;
-  listItemHeight?: number;
-  step?: number;
-  precision?: number;
-  minuteStep?: number;
-  secondStep?: number;
-
-  // strings adicionales
-  addonBefore?: string;
-  addonAfter?: string;
-  prefix?: string;
-  suffix?: string;
-  optionFilterProp?: string;
-  optionLabelProp?: string;
-  notFoundContent?: string;
-  dropdownStyle?: string;
-  dropdownClassName?: string;
-
-  // selects restringidos
-  size?: "small" | "middle" | "large";
-  status?: "" | "error" | "warning";
-  placement?: "bottomLeft" | "bottomRight" | "topLeft" | "topRight";
-  mode?: "" | "multiple" | "tags";
-  formatDate?: string;
-  formatTime?: string;
-
-  // booleans (check/flags)
-  block?: boolean;
-  danger?: boolean;
-  loading?: boolean;
-  disabled?: boolean;
-  visibilityToggle?: boolean;
-  autoSize?: boolean;
-  showCount?: boolean;
-  allowClear?: boolean;
-  showSearch?: boolean;
-  filterOption?: boolean;
-  dropdownMatchSelectWidth?: boolean | number;
-  labelInValue?: boolean;
-  defaultActiveFirstOption?: boolean;
-  virtual?: boolean;
-  bordered?: boolean;
-  showArrow?: boolean;
-  open?: boolean;
-  keyboard?: boolean;
-  controls?: boolean;
-  dots?: boolean;
-  range?: boolean;
-  allowHalf?: boolean;
-  tooltips?: boolean | React.ReactNode[];
-  use12Hours?: boolean;
-  checked?: boolean;
-  indeterminate?: boolean;
-
-  // options para <Select>
-  options?: { label: string; value: string }[];
-
-  // Button
-  type?: "default" | "primary" | "dashed" | "text" | "link";
 }
 
 export function useInputValidation(params: ValidationParams) {
@@ -215,6 +142,24 @@ export function useInputValidation(params: ValidationParams) {
         fields.secondStep,
         validators.validateSecondStep
       );
+    // ---- RadioGroupAdvancedFields ----
+    if (fields.optionType !== undefined) {
+      checkField(
+        "errorOptionType",
+        fields.optionType,
+        validators.validateOptionType
+      );
+    }
+    if (fields.buttonStyle !== undefined) {
+      checkField(
+        "errorButtonStyle",
+        fields.buttonStyle,
+        validators.validateButtonStyle
+      );
+    }
+    if (fields.size !== undefined && fields.optionType === "button") {
+      checkField("errorButtonSize", fields.size, validators.validateButtonSize);
+    }
 
     // ---- Booleans ----
     const booleanFields: (keyof ValidationParams)[] = [
@@ -247,18 +192,20 @@ export function useInputValidation(params: ValidationParams) {
     ];
 
     booleanFields.forEach((key) => {
-      if (fields[key as keyof typeof fields] !== undefined) {
+      const value = fields[key as keyof typeof fields];
+      if (value !== undefined) {
         let validatorFn = validators.validateCheckbox;
         if (key === "checked") validatorFn = validators.validateChecked;
         if (key === "indeterminate")
           validatorFn = validators.validateIndeterminate;
 
-        const { valid, error } = validatorFn(
-          fields[key as keyof typeof fields]
-        );
-        newErrors[`error${key[0].toUpperCase() + key.slice(1)}`] = valid
-          ? ""
-          : error || "";
+        const { valid, error } = validatorFn(value);
+
+        const errorKey = `error${
+          String(key)[0].toUpperCase() + String(key).slice(1)
+        }`;
+        newErrors[errorKey] = valid ? "" : error || "";
+
         if (!valid) hasError = true;
       }
     });

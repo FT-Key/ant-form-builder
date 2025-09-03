@@ -1,47 +1,34 @@
 "use client";
 
-import { Input, Button, Space, Select } from "antd";
+import { Input, Button, Space, Checkbox, Select } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
+interface OptionItem {
+  label: string;
+  value: string;
+  disabled?: boolean;
+  optionType?: "default" | "button"; // ✅ agregado para Radio
+}
+
 interface OptionsFieldsProps {
-  options: { label: string; value: string }[];
-  mode?: "" | "multiple" | "tags";
-  setMode: (value: "" | "multiple" | "tags") => void;
-  setOptions: (options: { label: string; value: string }[]) => void;
+  options: OptionItem[];
+  setOptions: (options: OptionItem[]) => void;
   errors?: Record<string, string>;
   show?: string[];
+  type?: "checkbox" | "radio"; // ✅ diferencia de uso
 }
 
 export function OptionsFields({
   options,
-  mode,
-  setMode,
   setOptions,
   errors = {},
   show = ["options"],
+  type = "checkbox",
 }: OptionsFieldsProps) {
   return (
     <div className="space-y-3">
-      {/* Modo de selección */}
-      <div>
-        <Select
-          value={mode ?? ""}
-          onChange={(v) => setMode(v as "" | "multiple" | "tags")}
-          style={{ width: "100%", marginBottom: 12 }}
-          status={errors["errorMode"] ? "error" : undefined}
-        >
-          <Option value="">default</Option>
-          <Option value="multiple">multiple</Option>
-          <Option value="tags">tags</Option>
-        </Select>
-        {errors["errorMode"] && (
-          <div className="text-red-500 text-sm">{errors["errorMode"]}</div>
-        )}
-      </div>
-
-      {/* Lista de opciones dinámicas */}
       {options.map((opt, idx) => (
         <Space
           key={idx}
@@ -86,6 +73,18 @@ export function OptionsFields({
             )}
           </div>
 
+          {/* Disabled */}
+          <Checkbox
+            checked={opt.disabled ?? false}
+            onChange={(e) => {
+              const newOptions = [...options];
+              newOptions[idx].disabled = e.target.checked;
+              setOptions(newOptions);
+            }}
+          >
+            Disabled
+          </Checkbox>
+
           {/* Botón eliminar */}
           <Button
             icon={<DeleteOutlined />}
@@ -100,9 +99,14 @@ export function OptionsFields({
       {/* Botón para agregar opción */}
       <Button
         icon={<PlusOutlined />}
-        onClick={() => setOptions([...options, { label: "", value: "" }])}
+        onClick={() =>
+          setOptions([
+            ...options,
+            { label: "", value: "", disabled: false, optionType: "default" },
+          ])
+        }
       >
-        Agregar opción
+        Agregar opción {type === "radio" ? "de radio" : "de checkbox"}
       </Button>
     </div>
   );

@@ -39,6 +39,7 @@ export default function CheckboxEditModal({
     allowClear: true,
     indeterminate: false,
     checked: false,
+    innerText: "", // 🔹 agregado
   });
 
   // Collapse avanzado
@@ -67,14 +68,18 @@ export default function CheckboxEditModal({
 
     const isFalse = (attr: string) => codeBlock.includes(`${attr}={false}`);
 
-    const labelMatch = codeBlock.match(/<Checkbox[^>]*>([^<]+)<\/Checkbox>/);
+    // Capturar el texto dentro del <Checkbox> ... </Checkbox>
+    const innerTextMatch = codeBlock.match(
+      /<Checkbox[^>]*>([^<]*)<\/Checkbox>/
+    );
 
     setLocalFields((prev) => ({
       ...prev,
-      label: labelMatch?.[1] ?? "",
+      label: matchAttr("label") ?? "",
       name: matchAttr("name") ?? "",
       inputId: matchAttr("id") ?? "",
       className: matchAttr("className") ?? "",
+      innerText: innerTextMatch?.[1] ?? "", // 🔹 sincronizado aquí
       disabled: matchBool("disabled"),
       autoFocus: matchBool("autoFocus"),
       readOnly: matchBool("readOnly"),
@@ -131,7 +136,14 @@ export default function CheckboxEditModal({
             setLocalFields((prev) => ({ ...prev, [key]: value }))
           }
           errors={errors}
-          show={["innerText", "label", "name", "disabled", "readOnly", "autoFocus"]}
+          show={[
+            "innerText", // 🔹 visible en básicos
+            "label",
+            "name",
+            "disabled",
+            "readOnly",
+            "autoFocus",
+          ]}
         />
 
         <Collapse
