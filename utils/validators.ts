@@ -419,3 +419,41 @@ export function validateButtonStyle(value?: string) {
   }
   return { valid: true };
 }
+
+// utils/validators.ts
+
+// ✅ Para checkedChildren / unCheckedChildren (string genérico opcional)
+export function validateCheckedChildren(value: any) {
+  if (value === undefined || value === "") return { valid: true }; // opcional
+  if (typeof value !== "string") {
+    return { valid: false, error: "checkedChildren debe ser un texto" };
+  }
+  if (value.length > 50) {
+    return { valid: false, error: "Máximo 50 caracteres" };
+  }
+  return { valid: true };
+}
+
+export function validateUnCheckedChildren(value: any) {
+  if (value === undefined || value === "") return { valid: true };
+  if (typeof value !== "string") {
+    return { valid: false, error: "unCheckedChildren debe ser un texto" };
+  }
+  if (value.length > 50) {
+    return { valid: false, error: "Máximo 50 caracteres" };
+  }
+  return { valid: true };
+}
+
+// ✅ Para switchSize ("default" | "small")
+export function validateSwitchSize(value: any) {
+  const allowed = ["default", "small"];
+  if (value === undefined) return { valid: true }; // opcional
+  if (!allowed.includes(value)) {
+    return {
+      valid: false,
+      error: "switchSize inválido (usa 'default' o 'small')",
+    };
+  }
+  return { valid: true };
+}

@@ -8,6 +8,7 @@ export function buildInputCode(
 ) {
   const props: string[] = [];
 
+  // Merge fields y extraProps
   const mappedFields: Record<string, any> = {
     ...fields,
     ...extraProps,
@@ -15,15 +16,19 @@ export function buildInputCode(
   };
   delete mappedFields.inputId;
 
-  const { options, innerText, ...rest } = mappedFields; // extraemos innerText
-
+  const {
+    options,
+    innerText,
+    component: extraComponent,
+    ...rest
+  } = mappedFields;
   const skipInnerProps = new Set(["label", "name"]);
 
+  // Construir props normales
   for (const [key, value] of Object.entries(rest)) {
     if (value === undefined || value === "") continue;
     if (skipInnerProps.has(key)) continue;
 
-    // Booleanos especiales o normales
     if (typeof value === "boolean") {
       if (["controls", "keyboard", "visibilityToggle"].includes(key)) {
         props.push(`${key}={${value}}`);
@@ -33,7 +38,6 @@ export function buildInputCode(
       continue;
     }
 
-    // Números que van entre llaves
     if (
       [
         "minuteStep",
@@ -54,17 +58,25 @@ export function buildInputCode(
       continue;
     }
 
-    // Strings normales
     props.push(`${key}="${value}"`);
   }
 
-  // Form.Item
+  // Form.Item attrs
   const formItemAttrs: string[] = [];
   if (fields.label !== undefined) formItemAttrs.push(`label="${fields.label}"`);
   if (fields.name !== undefined) formItemAttrs.push(`name="${fields.name}"`);
+  if (fields.valuePropName)
+    formItemAttrs.push(`valuePropName="${fields.valuePropName}"`);
 
-  // 🔹 Ajuste para Select con options
-  if (component === "Select" && Array.isArray(options) && options.length > 0) {
+  // Determinar el componente final
+  let fullComponent = extraComponent || component || "Input";
+
+  // 🔹 Casos especiales
+  if (
+    fullComponent === "Select" &&
+    Array.isArray(options) &&
+    options.length > 0
+  ) {
     const children = options
       .map(
         (opt) =>
@@ -79,8 +91,7 @@ ${children}
   </Form.Item>`;
   }
 
-  // 🔹 Ajuste para Checkbox.Group con options
-  if (component === "Checkbox.Group" && Array.isArray(options)) {
+  if (fullComponent === "Checkbox.Group" && Array.isArray(options)) {
     const optionsString = `[${options
       .map((opt) =>
         typeof opt === "string"
@@ -91,13 +102,11 @@ ${children}
             )}', value: '${opt.value.replace(/'/g, "\\'")}' }`
       )
       .join(", ")}]`;
-
     props.push(`options={${optionsString}}`);
   }
 
-  // 🔹 Ajuste para Radio.Group con options
   if (
-    component === "Radio.Group" &&
+    fullComponent === "Radio.Group" &&
     Array.isArray(options) &&
     options.length > 0
   ) {
@@ -112,22 +121,34 @@ ${children}
   </Form.Item>`;
   }
 
-  // Determinar el componente completo
-  let fullComponent = component;
+  if (fullComponent === "Switch") {
+    if (rest.switchSize) props.push(`size="${rest.switchSize}"`);
+    if (rest.checked !== undefined) props.push(`checked={${rest.checked}}`);
+    if (rest.loading !== undefined) props.push(`loading={${rest.loading}}`);
+    if (rest.checkedChildren)
+      props.push(`checkedChildren="${rest.checkedChildren}"`);
+    if (rest.unCheckedChildren)
+      props.push(`unCheckedChildren="${rest.unCheckedChildren}"`);
+
+    return `<Form.Item ${formItemAttrs.join(" ")} >
+    <Switch ${props.join(" ")} />
+</Form.Item>`;
+  }
+
+  // Otros componentes con namespace
   if (namespace) {
-    fullComponent = `${namespace}.${component}`;
-  } else if (component === "RangePicker") {
+    fullComponent = `${namespace}.${fullComponent}`;
+  } else if (fullComponent === "RangePicker") {
     fullComponent = `DatePicker.RangePicker`;
     if (fields.formatDate) props.push(`format="${fields.formatDate}"`);
     if (fields.className) props.push(`className="${fields.className}"`);
-  } else if (component === "TimePicker") {
+  } else if (fullComponent === "TimePicker") {
     fullComponent = `TimePicker`;
     if (fields.formatTime) props.push(`format="${fields.formatTime}"`);
   } else {
     if (fields.className) props.push(`className="${fields.className}"`);
   }
 
-  // 🔹 Ajuste para innerText
   const hasInnerText = typeof innerText === "string" && innerText.trim() !== "";
   if (hasInnerText) {
     return `<Form.Item ${formItemAttrs.join(" ")} >

@@ -4,6 +4,7 @@ import { Input, Select, Checkbox } from "antd";
 import { BaseInputFields } from "@/types/BaseInputFields";
 import { DateTimeAdvancedFields } from "./advanced/DateTimeAdvancedFields";
 import { RadioGroupAdvancedFields } from "./advanced/RadioGroupAdvancedFields";
+import { SwitchAdvancedFields } from "./advanced/SwitchAdvancedFields";
 
 const { Option } = Select;
 
@@ -431,6 +432,13 @@ export function AdvancedFields({
       )}
       {show.includes("optionType") && (
         <RadioGroupAdvancedFields fields={fields} setField={setField} />
+      )}
+      {show.includes("switchAdvanced") && (
+        <SwitchAdvancedFields
+          fields={fields}
+          setField={setField}
+          errors={errors}
+        />
       )}
     </div>
   );

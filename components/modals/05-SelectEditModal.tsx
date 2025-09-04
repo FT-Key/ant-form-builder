@@ -52,26 +52,17 @@ export default function SelectEditModal({
     options: [],
   });
 
-  // --- Collapse hooks ---
-  const {
-    activePanels: activeOptionPanels,
-    setActivePanels: setActiveOptionPanels,
-    validateAndOpen: validateAndOpenOptions,
-  } = useCollapsePanels([], [], ["errorOptions"]);
-
-  const {
-    activePanels: activeAdvancedPanels,
-    setActivePanels: setActiveAdvancedPanels,
-    validateAndOpen: validateAndOpenAdvanced,
-  } = useCollapsePanels(
-    [],
+  // --- Collapse hook único ---
+  const { activePanels, setActivePanels, validateAndOpen } = useCollapsePanels(
+    ["errorLabel", "errorName"], // errores básicos
     [
       "errorId",
       "errorClassName",
       "errorStatus",
       "errorAllowClear",
       "errorShowSearch",
-    ]
+    ], // errores avanzados
+    ["errorOption"] // errores de opciones
   );
 
   // --- Input validation hook ---
@@ -168,18 +159,13 @@ export default function SelectEditModal({
         )
       ).map((m) => ({ value: m[1], label: m[2] })),
     }));
-
-    // --- Abrir automáticamente panels con errores al abrir modal ---
-    const currentErrors = validateAndSave();
-    validateAndOpenOptions(currentErrors);
-    validateAndOpenAdvanced(currentErrors);
   }, [open, codeBlock]);
 
   const handleSave = () => {
     const currentErrors = validateAndSave();
 
-    validateAndOpenOptions(currentErrors);
-    validateAndOpenAdvanced(currentErrors);
+    // abrir paneles solo al guardar si hay errores
+    validateAndOpen(currentErrors);
 
     const hasAnyErrors = Object.keys(currentErrors).some(
       (key) => currentErrors[key]
@@ -232,11 +218,10 @@ export default function SelectEditModal({
             "status",
           ]}
         />
-
         <Collapse
           ghost
-          activeKey={activeOptionPanels}
-          onChange={(keys) => setActiveOptionPanels(keys as string[])}
+          activeKey={activePanels}
+          onChange={(keys) => setActivePanels(keys as string[])}
         >
           <Panel header="Opciones" key="options">
             <OptionsFields
@@ -247,14 +232,8 @@ export default function SelectEditModal({
               errors={errors}
             />
           </Panel>
-        </Collapse>
 
-        <Collapse
-          ghost
-          activeKey={activeAdvancedPanels}
-          onChange={(keys) => setActiveAdvancedPanels(keys as string[])}
-        >
-          <Panel header="Opciones avanzadas" key="advanced">
+          <Panel header="Opciones avanzadas" key="1">
             <AdvancedFields
               fields={localFields}
               setField={(key, value) =>

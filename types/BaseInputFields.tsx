@@ -99,6 +99,11 @@ export interface BaseInputFields {
   checked?: boolean;
   indeterminate?: boolean;
 
+  // Switch específicos
+  checkedChildren?: string;
+  unCheckedChildren?: string;
+  switchSize?: "default" | "small";
+
   // Otros
   options?: OptionItem[]; // usado en CheckboxGroup, RadioGroup, Select, etc.
   [key: string]: any; // flexibilidad extra

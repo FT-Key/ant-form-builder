@@ -248,6 +248,28 @@ export function useInputValidation(params: ValidationParams) {
     if (fields.size !== undefined && fields.type !== undefined)
       checkField("errorButtonSize", fields.size, validators.validateButtonSize);
 
+    // ---- Switch específicos ----
+    if (fields.checkedChildren !== undefined)
+      checkField(
+        "errorCheckedChildren",
+        fields.checkedChildren,
+        validators.validateCheckedChildren
+      );
+
+    if (fields.unCheckedChildren !== undefined)
+      checkField(
+        "errorUnCheckedChildren",
+        fields.unCheckedChildren,
+        validators.validateUnCheckedChildren
+      );
+
+    if (fields.switchSize !== undefined)
+      checkField(
+        "errorSwitchSize",
+        fields.switchSize,
+        validators.validateSwitchSize
+      );
+
     // ---- Options de Select ----
     if (fields.options !== undefined) {
       const res = validators.validateOptionsArray(fields.options);
